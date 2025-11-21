@@ -1,0 +1,14 @@
+services:
+  scorefy-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: scorefy-admin
+    ports:
+      - "5174:3000"
+    environment:
+      NODE_ENV: development
+      HOSTNAME: 0.0.0.0
+    volumes:
+      - .:/app
+    restart: unless-stopped
