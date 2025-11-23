@@ -24,10 +24,10 @@ export function ChartLine<T extends object>({ data, lines, xKey }: ChartLineProp
         <YAxis stroke="var(--color-text-secondary)" tickLine={false} axisLine={false} width={48} />
         <Tooltip
           contentStyle={{
-            backgroundColor: 'rgba(17,24,39,0.95)',
+            backgroundColor: 'var(--color-surface-contrast)',
             borderRadius: 12,
-            border: '1px solid rgba(148,163,184,0.15)',
-            color: '#f8fafc'
+            border: '1px solid var(--border-soft)',
+            color: 'var(--color-text-primary)'
           }}
         />
         <Legend wrapperStyle={{ color: 'var(--color-text-secondary)' }} />

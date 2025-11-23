@@ -7,10 +7,11 @@ type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost'
 type ButtonSize = 'sm' | 'md'
 
 const variantClass: Record<ButtonVariant, string> = {
-  primary: 'bg-primary text-onPrimary hover:bg-primary/90',
-  secondary: 'bg-secondary/20 text-secondary hover:bg-secondary/30',
-  outline: 'border border-borderSoft bg-transparent text-textPrimary hover:border-borderStrong',
-  ghost: 'text-textSecondary hover:text-textPrimary'
+  primary: 'bg-red-primary text-white hover:bg-red-hover shadow-sm',
+  secondary: 'bg-gray-100 text-black hover:bg-gray-300/80 dark:bg-dark-surface dark:text-dark-text dark:hover:bg-dark-surface2',
+  outline:
+    'border border-borderSoft bg-transparent text-textPrimary hover:bg-surface-muted dark:border-dark-border dark:text-dark-text dark:hover:bg-dark-surface2',
+  ghost: 'text-textSecondary hover:text-textPrimary hover:bg-surface-muted'
 }
 
 const sizeClass: Record<ButtonSize, string> = {
@@ -27,7 +28,7 @@ export function Button({ variant = 'primary', size = 'md', className, ...props }
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center rounded-xl font-semibold transition disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex items-center justify-center rounded-md font-semibold transition disabled:cursor-not-allowed disabled:opacity-60',
         variantClass[variant],
         sizeClass[size],
         className,

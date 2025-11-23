@@ -9,10 +9,15 @@ const config: Config = {
         onPrimary: 'var(--color-on-primary)',
         secondary: 'var(--color-secondary)',
         tertiary: 'var(--color-tertiary)',
+        accent: 'var(--color-accent)',
+        success: 'var(--color-success)',
+        warning: 'var(--color-warning)',
         surface: {
           DEFAULT: 'var(--color-surface)',
+          contrast: 'var(--color-surface-contrast)',
           muted: 'var(--surface-muted)',
-          elevated: 'var(--surface-elevated)'
+          elevated: 'var(--surface-elevated)',
+          raised: 'var(--surface-elevated-strong)'
         },
         onSurface: 'var(--color-on-surface)',
         textPrimary: 'var(--color-text-primary)',
@@ -21,6 +26,27 @@ const config: Config = {
         disabled: 'var(--color-disabled)',
         borderSoft: 'var(--border-soft)',
         borderStrong: 'var(--border-strong)',
+        red: {
+          primary: '#E52534',
+          hover: '#FF3B46'
+        },
+        gray: {
+          50: '#F7F7F7',
+          100: '#E5E5E5',
+          300: '#8A8A8A'
+        },
+        dark: {
+          bg: '#0E0E0E',
+          surface: '#1A1A1A',
+          surface2: '#1F1F1F',
+          border: '#2D2D2D',
+          text: '#FFFFFF',
+          subtitle: '#B3B3B3',
+          red: {
+            primary: '#E52534',
+            hover: '#FF3B46'
+          }
+        },
         status: {
           live: '#10B981',
           paused: '#EAAA08',
@@ -32,7 +58,7 @@ const config: Config = {
         sans: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif']
       },
       boxShadow: {
-        card: '0 25px 60px var(--shadow-card)'
+        card: 'var(--shadow-card)'
       },
       borderRadius: {
         xl: '1rem',

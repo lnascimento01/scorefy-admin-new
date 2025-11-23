@@ -17,12 +17,12 @@ export function ChartBar<T extends object>({ data, dataKey, nameKey, color = '#e
         <XAxis dataKey={nameKey as string} stroke="var(--color-text-secondary)" tickLine={false} axisLine={false} />
         <YAxis stroke="var(--color-text-secondary)" tickLine={false} axisLine={false} width={48} />
         <Tooltip
-          cursor={{ fill: 'rgba(59,130,246,0.08)' }}
+          cursor={{ fill: 'rgba(210,33,40,0.08)' }}
           contentStyle={{
-            backgroundColor: 'rgba(15,23,42,0.9)',
+            backgroundColor: 'var(--color-surface-contrast)',
             borderRadius: 12,
-            border: '1px solid rgba(148,163,184,0.15)',
-            color: '#f8fafc'
+            border: '1px solid var(--border-soft)',
+            color: 'var(--color-text-primary)'
           }}
         />
         <Bar dataKey={dataKey as string} fill={color} radius={[12, 12, 0, 0]} />

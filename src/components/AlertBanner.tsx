@@ -7,19 +7,19 @@ export type AlertBannerVariant = 'info' | 'success' | 'warning' | 'error'
 
 const variantConfig: Record<AlertBannerVariant, { className: string; icon: LucideIcon }> = {
   info: {
-    className: 'border-secondary/40 bg-secondary/10 text-secondary',
+    className: 'border-accent/30 bg-accent/10 text-accent',
     icon: Info
   },
   success: {
-    className: 'border-tertiary/40 bg-tertiary/10 text-tertiary',
+    className: 'border-success/30 bg-success/10 text-success',
     icon: CheckCircle2
   },
   warning: {
-    className: 'border-warning/40 bg-warning/10 text-warning',
+    className: 'border-warning/30 bg-warning/10 text-warning',
     icon: AlertTriangle
   },
   error: {
-    className: 'border-primary/40 bg-primary/10 text-primary',
+    className: 'border-red-primary/40 bg-red-primary/10 text-red-primary dark:border-dark-red-primary/50 dark:bg-dark-red-primary/15 dark:text-dark-red-primary',
     icon: XCircle
   }
 }

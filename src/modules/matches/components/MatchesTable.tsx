@@ -17,15 +17,15 @@ const statusLabel: Record<MatchStatus, string> = {
   canceled: 'Cancelada'
 }
 
-const statusVariant: Record<MatchStatus, 'info' | 'warning' | 'success'> = {
+const statusVariant: Record<MatchStatus, 'info' | 'warning' | 'success' | 'danger'> = {
   scheduled: 'info',
   not_started: 'info',
-  live: 'warning',
+  live: 'danger',
   paused: 'warning',
   halftime: 'warning',
   final: 'success',
   finished: 'success',
-  canceled: 'info'
+  canceled: 'danger'
 }
 
 interface MatchesTableProps {

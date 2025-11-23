@@ -12,18 +12,19 @@ import { PageWrapper } from '@/components/layout/PageWrapper'
 import { AlertBanner } from '@/components/AlertBanner'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { ChartContainer } from '@/components/ui/ChartContainer'
 import { Radio, TrendingUp, Trophy, Users } from 'lucide-react'
 import type { MatchStatus } from '../types'
 
-const statusVariant: Record<MatchStatus, 'info' | 'warning' | 'success'> = {
+const statusVariant: Record<MatchStatus, 'info' | 'warning' | 'success' | 'danger'> = {
   scheduled: 'info',
   not_started: 'info',
-  live: 'warning',
+  live: 'danger',
   paused: 'warning',
   halftime: 'warning',
   final: 'success',
   finished: 'success',
-  canceled: 'info'
+  canceled: 'danger'
 }
 
 const statusLabel: Record<MatchStatus, string> = {
@@ -107,7 +108,7 @@ export function DashboardPage({ currentUser }: DashboardPageProps) {
           </div>
         )}
 
-        <section className="grid gap-[var(--space-sm)] [grid-template-columns:repeat(auto-fit,minmax(min(16rem,100%),1fr))]">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {cards.map((card) => (
             <CardKPI
               key={card.title}
@@ -121,39 +122,33 @@ export function DashboardPage({ currentUser }: DashboardPageProps) {
           ))}
         </section>
 
-        <section className="grid gap-[var(--space-md)] [grid-template-columns:repeat(auto-fit,minmax(min(22rem,100%),1fr))]">
-          <div className="card flex flex-col gap-[var(--space-sm)] p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-semibold text-textPrimary">{dictionary.dashboard.charts.teamPerformance.title}</h3>
-                <p className="text-sm text-textSecondary">{dictionary.dashboard.charts.teamPerformance.description}</p>
-              </div>
-            </div>
-            <ChartBar data={snapshot.teamPerformance} dataKey="goals" nameKey="team" color="#ef4444" />
-          </div>
-          <div className="card flex flex-col gap-[var(--space-sm)] p-6">
-            <div className="flex flex-wrap items-center justify-between gap-[var(--space-xs)]">
-              <div>
-                <h3 className="text-xl font-semibold text-textPrimary">{dictionary.dashboard.charts.weeklyPerformance.title}</h3>
-                <p className="text-sm text-textSecondary">{dictionary.dashboard.charts.weeklyPerformance.description}</p>
-              </div>
-            </div>
+        <section className="grid gap-4 lg:grid-cols-2">
+          <ChartContainer
+            title={dictionary.dashboard.charts.teamPerformance.title}
+            description={dictionary.dashboard.charts.teamPerformance.description}
+          >
+            <ChartBar data={snapshot.teamPerformance} dataKey="goals" nameKey="team" color="#D22128" />
+          </ChartContainer>
+          <ChartContainer
+            title={dictionary.dashboard.charts.weeklyPerformance.title}
+            description={dictionary.dashboard.charts.weeklyPerformance.description}
+          >
             <ChartLine
               data={snapshot.weeklyPerformance}
               xKey="label"
               lines={[
-                { dataKey: 'goals', color: '#ef4444', name: dictionary.dashboard.charts.labels.goalsFor },
-                { dataKey: 'conceded', color: '#3b82f6', name: dictionary.dashboard.charts.labels.goalsAgainst }
+                { dataKey: 'goals', color: '#D22128', name: dictionary.dashboard.charts.labels.goalsFor },
+                { dataKey: 'conceded', color: '#1D4ED8', name: dictionary.dashboard.charts.labels.goalsAgainst }
               ]}
             />
-          </div>
+          </ChartContainer>
         </section>
 
-        <section className="card flex flex-col gap-[var(--space-sm)] p-6">
-          <div className="flex flex-wrap items-start justify-between gap-[var(--space-xs)]">
+        <section className="card flex flex-col gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-2">
-              <h3 className="text-xl font-semibold text-textPrimary">{dictionary.dashboard.matches.title}</h3>
-              <p className="text-sm text-textSecondary">{dictionary.dashboard.matches.description}</p>
+              <h3 className="text-xl font-semibold text-textPrimary dark:text-dark-text">{dictionary.dashboard.matches.title}</h3>
+              <p className="text-sm text-textSecondary dark:text-dark-subtitle">{dictionary.dashboard.matches.description}</p>
             </div>
           </div>
           <Table>

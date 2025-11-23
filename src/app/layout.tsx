@@ -1,6 +1,7 @@
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { I18nProvider } from '@/lib/i18n'
+import { ThemeInitializer } from '@/theme/ThemeInitializer'
 
 export const metadata = {
   title: 'Scorefy Admin',
@@ -9,8 +10,9 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" data-theme="light" className="light">
       <body suppressHydrationWarning={true}>
+        <ThemeInitializer />
         <AuthProvider>
           <I18nProvider>{children}</I18nProvider>
         </AuthProvider>
