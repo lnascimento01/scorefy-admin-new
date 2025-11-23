@@ -1,31 +1,55 @@
 export type ThemeName = 'light' | 'dark'
 
-export const palette = {
+export const theme = {
   light: {
-    primary: '#D22128',
-    primaryHover: '#B71C21',
-    secondary: '#8A8A8A',
-    surface: '#F7F7F7',
-    surfaceContrast: '#FFFFFF',
-    border: '#E5E5E5',
-    borderStrong: '#8A8A8A',
+    bg: '#F6F6F7',
+    card: '#FFFFFF',
+    border: '#E5E5E7',
     text: '#0A0A0A',
-    textMuted: '#525252',
-    subtitle: '#8A8A8A'
+    textSecondary: '#6E6E73',
+    accent: '#007AFF',
+    accentHover: '#0A84FF'
   },
   dark: {
-    primary: '#8E0E12',
-    primaryHover: '#A01317',
-    secondary: '#C7C7C7',
-    surface: '#000000',
-    surfaceContrast: '#111111',
-    border: '#1E1E1E',
-    borderStrong: '#2A2A2A',
+    bg: '#0D0D0D',
+    card: '#1C1C1E',
+    elevated: '#2C2C2E',
+    border: '#3A3A3C',
     text: '#FFFFFF',
-    textMuted: '#C7C7C7',
-    subtitle: '#8A8A8A'
+    textSecondary: '#B3B3B3',
+    accent: '#0A84FF',
+    accentHover: '#409CFF'
   }
-}
+} satisfies Record<ThemeName, Record<string, string>>
+
+export const palette = {
+  light: {
+    primary: theme.light.accent,
+    primaryHover: theme.light.accentHover,
+    secondary: theme.light.textSecondary,
+    surface: theme.light.bg,
+    surfaceContrast: theme.light.card,
+    surfaceElevated: theme.light.card,
+    border: theme.light.border,
+    borderStrong: '#C7C7CC',
+    text: theme.light.text,
+    textMuted: theme.light.textSecondary,
+    subtitle: theme.light.textSecondary
+  },
+  dark: {
+    primary: theme.dark.accent,
+    primaryHover: theme.dark.accentHover,
+    secondary: theme.dark.textSecondary,
+    surface: theme.dark.bg,
+    surfaceContrast: theme.dark.card,
+    surfaceElevated: theme.dark.elevated,
+    border: theme.dark.border,
+    borderStrong: '#515156',
+    text: theme.dark.text,
+    textMuted: theme.dark.textSecondary,
+    subtitle: theme.dark.textSecondary
+  }
+} satisfies Record<ThemeName, Record<string, string>>
 
 export const radii = {
   sm: '0.5rem',
@@ -43,8 +67,8 @@ export const spacing = {
 }
 
 export const shadows = {
-  card: '0 10px 30px rgba(0, 0, 0, 0.06)',
-  popover: '0 20px 50px rgba(0, 0, 0, 0.12)'
+  card: '0 2px 12px rgba(0, 0, 0, 0.08)',
+  popover: '0 12px 36px rgba(0, 0, 0, 0.12)'
 }
 
 export const typography = {
@@ -54,11 +78,13 @@ export const typography = {
 
 export const semanticTokens = {
   light: {
-    surfaceMuted: '#F0F0F0',
-    surfaceRaised: '#FFFFFF'
+    surfaceMuted: '#EFEFF1',
+    surfaceRaised: theme.light.card,
+    surfaceElevated: theme.light.card
   },
   dark: {
-    surfaceMuted: '#1A1A1A',
-    surfaceRaised: '#111111'
+    surfaceMuted: theme.dark.card,
+    surfaceRaised: theme.dark.card,
+    surfaceElevated: theme.dark.elevated
   }
 }

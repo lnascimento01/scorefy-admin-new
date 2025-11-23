@@ -46,15 +46,17 @@ export function DashboardShell({ userName, userEmail, onRefresh, refreshing, chi
 
   return (
     <div className="flex min-h-screen bg-surface text-textPrimary">
-      <div className="hidden min-h-screen w-64 shrink-0 lg:block lg:sticky lg:top-0 lg:h-screen">
+      <div className="hidden min-h-screen w-72 shrink-0 lg:block lg:sticky lg:top-0 lg:h-screen">
         <Sidebar
           items={navItems}
           activePath={pathname}
           footer={
-            <div className="space-y-1 rounded-lg bg-surface-muted p-3 dark:bg-dark-surface2">
-              <p className="text-sm font-semibold text-textPrimary dark:text-dark-text">Painel Scorefy</p>
-              <p>Controle partidas, súmulas e usuários com segurança.</p>
-            </div>
+            <>
+              <p className="text-base font-semibold text-textPrimary dark:text-dark-text">Painel Scorefy</p>
+              <p className="leading-relaxed text-textSecondary dark:text-dark-textSecondary">
+                Controle partidas, súmulas e usuários com segurança.
+              </p>
+            </>
           }
         />
       </div>
@@ -65,7 +67,7 @@ export function DashboardShell({ userName, userEmail, onRefresh, refreshing, chi
           onClick={() => setMenuOpen(false)}
           role="presentation"
         >
-          <div className="h-full w-72 bg-surface-contrast p-4 dark:bg-dark-surface" onClick={(event) => event.stopPropagation()}>
+          <div className="h-full w-72 bg-surface p-4 dark:bg-dark-surface" onClick={(event) => event.stopPropagation()}>
             <Sidebar items={navItems} activePath={pathname} onClose={() => setMenuOpen(false)} />
           </div>
         </div>

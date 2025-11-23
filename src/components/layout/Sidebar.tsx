@@ -13,16 +13,16 @@ interface SidebarProps {
 
 export function Sidebar({ items, activePath, footer, onClose }: SidebarProps) {
   return (
-    <aside className="sidebar-panel flex h-full w-64 flex-col border-r border-borderSoft/70 bg-surface-contrast px-4 py-6 text-textPrimary dark:border-dark-border dark:bg-dark-surface">
-      <div className="flex items-center justify-between px-2">
-        <div>
-          <p className="text-xs font-semibold tracking-[0.2em] text-textSecondary dark:text-dark-subtitle">SCOREFY</p>
-          <p className="text-lg font-semibold text-textPrimary dark:text-dark-text">Admin</p>
+    <aside className="flex h-full w-72 flex-col gap-8 bg-surface px-6 py-6 text-textPrimary dark:bg-dark-surface">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <p className="text-[11px] font-semibold tracking-[0.26em] text-textSecondary dark:text-dark-textSecondary">SCOREFY</p>
+          <p className="text-2xl font-semibold text-textPrimary dark:text-dark-text">Admin</p>
         </div>
         {onClose && (
           <button
             type="button"
-            className="rounded-md p-2 text-textSecondary transition hover:bg-surface-muted dark:text-dark-subtitle dark:hover:bg-dark-surface2 lg:hidden"
+            className="rounded-full p-2 text-textSecondary transition hover:bg-card hover:text-textPrimary dark:text-dark-textSecondary dark:hover:bg-dark-surface2 lg:hidden"
             onClick={onClose}
             aria-label="Fechar menu lateral"
           >
@@ -31,7 +31,7 @@ export function Sidebar({ items, activePath, footer, onClose }: SidebarProps) {
         )}
       </div>
 
-      <nav className="mt-6 space-y-1" aria-label="Navegação principal">
+      <nav className="flex flex-col gap-2" aria-label="Navegação principal">
         {items.map((item) => (
           <SidebarItem
             key={item.href}
@@ -44,7 +44,7 @@ export function Sidebar({ items, activePath, footer, onClose }: SidebarProps) {
         ))}
       </nav>
 
-      {footer && <div className="mt-auto px-2 pt-6 text-xs text-textSecondary dark:text-dark-subtitle">{footer}</div>}
+      {footer && <div className="mt-auto space-y-2 rounded-apple border border-borderSoft bg-card p-4 text-sm text-textSecondary shadow-card dark:border-dark-border dark:bg-dark-surface2 dark:text-dark-textSecondary">{footer}</div>}
     </aside>
   )
 }

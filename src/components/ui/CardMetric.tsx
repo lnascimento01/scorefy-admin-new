@@ -32,20 +32,20 @@ export function CardMetric({ title, value, description, change, trend = 'neutral
     : null
 
   return (
-    <div className={cn('rounded-xl border border-borderSoft bg-surface-contrast p-4 shadow-card dark:border-dark-border dark:bg-dark-surface', className)}>
-      <div className="flex items-start justify-between gap-3">
+    <div className={cn('card flex flex-col gap-3 p-5 lg:p-6', className)}>
+      <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
           <span className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-dark-subtitle">{title}</span>
           <p className="text-3xl font-semibold leading-tight text-textPrimary dark:text-dark-text">{value}</p>
-          {change && <p className={cn('text-sm font-semibold', trendColor)}>{change}</p>}
+          {change && <p className={cn('text-sm font-medium text-textSecondary', trendColor)}>{change}</p>}
         </div>
         {iconNode && (
-          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-red-primary/10 text-red-primary dark:bg-dark-red-primary/15 dark:text-dark-red-primary">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full border border-borderSoft bg-surface text-textSecondary dark:border-dark-border dark:bg-dark-surface dark:text-dark-subtitle">
             {iconNode}
           </span>
         )}
       </div>
-      {description && <p className="pt-2 text-sm text-textSecondary dark:text-dark-subtitle">{description}</p>}
+      {description && <p className="text-sm leading-relaxed text-textSecondary dark:text-dark-subtitle">{description}</p>}
     </div>
   )
 }

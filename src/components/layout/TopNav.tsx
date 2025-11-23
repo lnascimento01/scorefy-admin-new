@@ -4,6 +4,7 @@ import { RefreshCcw, Settings2, Bell, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { ThemeToggle } from '../ui/ThemeToggle'
 import { Button } from '../ui/button'
+import { useI18n } from '@/lib/i18n'
 
 interface TopNavProps {
   title?: string
@@ -24,6 +25,14 @@ export function TopNav({
   refreshing,
   className
 }: TopNavProps) {
+  const { language, setLanguage, availableLanguages } = useI18n()
+
+  const languageButtons = availableLanguages.map(({ code, shortLabel }) => ({
+    code,
+    label: shortLabel,
+    flag: code === 'pt' ? '🇧🇷' : code === 'en' ? '🇺🇸' : '🇪🇸'
+  }))
+
   return (
     <header className={cn('header-panel flex flex-wrap items-center justify-between gap-4 rounded-xl px-4 py-4 shadow-card sm:px-6', className)}>
       <div className="space-y-1">
@@ -33,15 +42,27 @@ export function TopNav({
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="h-10 w-10 px-0" aria-label="Português">
-            🇧🇷
-          </Button>
-          <Button variant="outline" size="sm" className="h-10 w-10 px-0" aria-label="Inglês">
-            🇺🇸
-          </Button>
-          <Button variant="outline" size="sm" className="h-10 w-10 px-0" aria-label="Espanhol">
-            🇪🇸
-          </Button>
+          {languageButtons.map(({ code, flag, label }) => {
+            const isActive = language === code
+            return (
+              <Button
+                key={code}
+                variant={isActive ? 'secondary' : 'outline'}
+                size="sm"
+                className={cn(
+                  'h-10 w-10 px-0 font-semibold',
+                  isActive ? 'border-borderSoft bg-card text-accent shadow-card dark:border-dark-border dark:bg-dark-surface2' : '',
+                )}
+                aria-label={label}
+                aria-pressed={isActive}
+                onClick={() => {
+                  if (!isActive) setLanguage(code)
+                }}
+              >
+                {flag}
+              </Button>
+            )
+          })}
         </div>
         <div className="flex items-center gap-3">
           {onRefresh && (

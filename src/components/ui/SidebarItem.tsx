@@ -18,14 +18,20 @@ export function SidebarItem({ label, icon: Icon, href, active = false, onClick }
       href={href}
       onClick={onClick}
       className={cn(
-        'flex items-center gap-3 rounded-md px-4 py-2 text-sm font-medium transition',
+        'group flex items-center gap-3 rounded-apple border px-3 py-2.5 text-sm font-medium transition',
         active
-          ? 'bg-red-primary text-white shadow-sm dark:bg-dark-red-primary'
-          : 'text-textPrimary hover:bg-surface-muted dark:text-dark-text dark:hover:bg-dark-surface2',
+          ? 'border-borderSoft bg-card text-accent shadow-card dark:border-dark-border dark:bg-dark-surface2 dark:text-accent'
+          : 'border-transparent text-[#0A0A0A] hover:border-borderSoft hover:bg-card hover:text-accent dark:text-white dark:hover:border-dark-border dark:hover:bg-dark-surface2 dark:hover:text-accent',
       )}
     >
-      <Icon size={18} />
-      {label}
+      <Icon
+        size={18}
+        className={cn(
+          'transition',
+          active ? 'text-accent' : 'text-[#0A0A0A] group-hover:text-accent dark:text-white dark:group-hover:text-accent',
+        )}
+      />
+      <span className="leading-none">{label}</span>
     </Link>
   )
 }
