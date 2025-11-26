@@ -14,6 +14,7 @@ import { PlayerGrid, type PlayerEventAction } from '@/modules/match-control/comp
 import { ControlActions } from '@/modules/match-control/components/ControlActions'
 import { GoalSelectionDialog } from '@/modules/match-control/components/GoalSelectionDialog'
 import { useMatchControl } from '@/modules/match-control/hooks/useMatchControl'
+import { useMatchActions, type MatchControlAction } from '@/modules/match-control/hooks/useMatchActions'
 import type {
   MatchControlParticipant,
   MatchQuickAction,
@@ -27,6 +28,7 @@ import { useI18n } from '@/lib/i18n'
 import type { Language, TranslationRecord } from '@/lib/i18n'
 import dynamic from 'next/dynamic'
 import { toast } from 'react-toastify'
+import { formatClock } from '@/modules/match-control/utils/time'
 import 'react-toastify/dist/ReactToastify.css'
 
 const ToastViewport = dynamic(async () => {
@@ -52,9 +54,6 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
     error,
     actionMessage,
     clearMessage,
-    clockLabel,
-    controlLoading,
-    runControlAction,
     triggerQuickAction,
     eventLoading,
     reload,
@@ -62,11 +61,22 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
     pendingEvents,
     networkStatus,
     timeoutState,
-    clearTimeout,
-    controlError,
-    clearControlError,
-    adjustClock
+    clearTimeout
   } = useMatchControl(matchId)
+  const {
+    start,
+    pause,
+    resume,
+    finish,
+    finishPeriod,
+    cancel,
+    adjustTime,
+    loadingAction,
+    message: actionFeedback,
+    clearMessage: clearActionFeedback,
+    error: actionError,
+    clearError: clearActionError
+  } = useMatchActions()
 
   const [selection, setSelection] = useState<{ action: MatchQuickAction; team: MatchSide } | null>(
     null
@@ -75,7 +85,7 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
   const [scoresheetMessage, setScoresheetMessage] = useState<string | null>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [clockDialogOpen, setClockDialogOpen] = useState(false)
-  const [clockInput, setClockInput] = useState(clockLabel)
+  const [clockInput, setClockInput] = useState('00:00')
   const [clockError, setClockError] = useState<string | null>(null)
   const [clockSaving, setClockSaving] = useState(false)
 
@@ -193,17 +203,34 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
   }, [])
 
   useEffect(() => {
-    if (!controlError) return
-    toast.error(controlError, { toastId: controlError, theme: 'dark' })
-    clearControlError()
-  }, [clearControlError, controlError])
+    if (!actionError) return
+    toast.error(actionError, { toastId: actionError, theme: 'dark' })
+    clearActionError()
+  }, [actionError, clearActionError])
+
+  const handleControlAction = useCallback(
+    async (action: MatchControlAction, payload?: { reason?: string }) => {
+      try {
+        if (action === 'start') await start(matchId)
+        if (action === 'pause') await pause(matchId, payload)
+        if (action === 'resume') await resume(matchId)
+        if (action === 'finish') await finish(matchId)
+        if (action === 'finishPeriod') await finishPeriod(matchId)
+        if (action === 'cancel') await cancel(matchId)
+      } finally {
+        await reload()
+      }
+    },
+    [cancel, finish, finishPeriod, matchId, pause, reload, resume, start]
+  )
 
   useEffect(() => {
     if (clockDialogOpen) {
-      setClockInput(clockLabel)
+      const initialSeconds = snapshot?.elapsedSeconds ?? 0
+      setClockInput(formatClock(initialSeconds))
       setClockError(null)
     }
-  }, [clockDialogOpen, clockLabel])
+  }, [clockDialogOpen, snapshot?.elapsedSeconds])
 
   const handleClockSave = async () => {
     const seconds = parseClockValue(clockInput)
@@ -213,7 +240,7 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
     }
     setClockSaving(true)
     try {
-      await adjustClock(seconds)
+      await adjustTime(matchId, seconds)
       setClockDialogOpen(false)
     } catch {
       setClockError('Não foi possível atualizar o cronômetro.')
@@ -232,6 +259,17 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
             <button
               type="button"
               onClick={clearMessage}
+              className="text-xs font-semibold text-secondary underline"
+            >
+              {dictionary.actions.dismiss}
+            </button>
+          </AlertBanner>
+        )}
+        {actionFeedback && (
+          <AlertBanner variant="info" message={actionFeedback}>
+            <button
+              type="button"
+              onClick={clearActionFeedback}
               className="text-xs font-semibold text-secondary underline"
             >
               {dictionary.actions.dismiss}
@@ -307,83 +345,83 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
           )}
 
           {!loading && detail && scoreboardHome && scoreboardAway && (
-           <div className="mt-6 space-y-6">
-      <MatchOverviewCard
-        detail={detail}
-        home={scoreboardHome}
-        away={scoreboardAway}
-        periodLabel={periodLabel}
-        clockLabel={clockLabel}
-        statusLabel={statusLabel}
-        dictionary={matchControlCopy}
-        language={language}
-        isFinalStatus={isFinalStatus}
-        onEditClock={() => setClockDialogOpen(true)}
-      />
+            <div className="mt-6 space-y-6">
+              <MatchOverviewCard
+                detail={detail}
+                home={scoreboardHome}
+                away={scoreboardAway}
+                periodLabel={periodLabel}
+                statusLabel={statusLabel}
+                dictionary={matchControlCopy}
+                language={language}
+                isFinalStatus={isFinalStatus}
+                onEditClock={() => setClockDialogOpen(true)}
+                matchId={matchId}
+              />
 
-            <div className="grid gap-6 xl:grid-cols-[2.2fr_0.8fr]">
-              <div className="space-y-6">
-                <div className="grid gap-6 xl:grid-cols-[minmax(220px,0.9fr)_minmax(0,2.1fr)]">
-                  <EventList events={events} loading={loading} className="min-h-[900px] xl:self-start" />
-                  <div className="space-y-6">
-                    <QuickActions
-                      actions={quickActions}
-                      onTrigger={handleQuickAction}
-                      disabled={eventLoading}
-                      variant="compact"
-                    />
-                    <div className="grid gap-4 lg:grid-cols-2">
-                      <PlayerGrid
-                        title={`Jogadores Mandante — ${detail.homeTeam.name}`}
-                        participants={detail.participants.home}
-                        side="home"
-                        actions={playerEventActions}
+              <div className="grid gap-6 xl:grid-cols-[2.2fr_0.8fr]">
+                <div className="space-y-6">
+                  <div className="grid gap-6 xl:grid-cols-[minmax(220px,0.9fr)_minmax(0,2.1fr)]">
+                    <EventList events={events} loading={loading} className="min-h-[900px] xl:self-start" />
+                    <div className="space-y-6">
+                      <QuickActions
+                        actions={quickActions}
+                        onTrigger={handleQuickAction}
                         disabled={eventLoading}
-                        onTriggerEvent={(playerId, action) => handlePlayerEvent('home', playerId, action)}
+                        variant="compact"
                       />
-                      <PlayerGrid
-                        title={`Jogadores Visitante — ${detail.awayTeam.name}`}
-                        participants={detail.participants.away}
-                        side="away"
-                        actions={playerEventActions}
-                        disabled={eventLoading}
-                        onTriggerEvent={(playerId, action) => handlePlayerEvent('away', playerId, action)}
-                      />
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        <PlayerGrid
+                          title={`Jogadores Mandante — ${detail.homeTeam.name}`}
+                          participants={detail.participants.home}
+                          side="home"
+                          actions={playerEventActions}
+                          disabled={eventLoading}
+                          onTriggerEvent={(playerId, action) => handlePlayerEvent('home', playerId, action)}
+                        />
+                        <PlayerGrid
+                          title={`Jogadores Visitante — ${detail.awayTeam.name}`}
+                          participants={detail.participants.away}
+                          side="away"
+                          actions={playerEventActions}
+                          disabled={eventLoading}
+                          onTriggerEvent={(playerId, action) => handlePlayerEvent('away', playerId, action)}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="space-y-6 xl:max-w-[360px] xl:justify-self-end">
-                <BroadcastCard url={detail.broadcastUrl} dictionary={matchControlCopy} />
-                <ControlActions
-                  statusLabel={statusLabel}
-                  canStart={canStart}
-                  canPause={Boolean(canPause)}
-                  canResume={Boolean(canResume)}
-                  canFinish={Boolean(canFinish)}
-                  canFinishPeriod={Boolean(canFinishPeriod)}
-                  canCancel={Boolean(canCancelMatch)}
-                  loadingAction={controlLoading}
-                  onAction={(action, payload) => runControlAction(action, payload)}
-                  lastSync={lastSyncAt}
-                  isFinalStatus={isFinalStatus}
-                />
+                <div className="space-y-6 xl:max-w-[360px] xl:justify-self-end">
+                  <BroadcastCard url={detail.broadcastUrl} dictionary={matchControlCopy} />
+                  <ControlActions
+                    statusLabel={statusLabel}
+                    canStart={canStart}
+                    canPause={Boolean(canPause)}
+                    canResume={Boolean(canResume)}
+                    canFinish={Boolean(canFinish)}
+                    canFinishPeriod={Boolean(canFinishPeriod)}
+                    canCancel={Boolean(canCancelMatch)}
+                    loadingAction={loadingAction}
+                    onAction={(action, payload) => handleControlAction(action, payload)}
+                    lastSync={lastSyncAt}
+                    isFinalStatus={isFinalStatus}
+                  />
+                </div>
               </div>
-            </div>
             </div>
           )}
         </section>
       </PageWrapper>
 
-     <GoalSelectionDialog
-       open={Boolean(selection)}
-       action={selection?.action ?? null}
-       players={playersForSelection}
-       team={selection?.team ?? null}
-       onSelect={handleSelectPlayer}
-       onClose={() => setSelection(null)}
-     />
+      <GoalSelectionDialog
+        open={Boolean(selection)}
+        action={selection?.action ?? null}
+        players={playersForSelection}
+        team={selection?.team ?? null}
+        onSelect={handleSelectPlayer}
+        onClose={() => setSelection(null)}
+      />
 
       <ClockAdjustDialog
         open={clockDialogOpen}
@@ -429,23 +467,23 @@ function MatchOverviewCard({
   home,
   away,
   periodLabel,
-  clockLabel,
   statusLabel,
   dictionary,
   language,
   isFinalStatus,
-  onEditClock
+  onEditClock,
+  matchId
 }: {
   detail: MatchControlDetail
   home: MatchControlTeamInfo
   away: MatchControlTeamInfo
   periodLabel: string
-  clockLabel: string
   statusLabel: string
   dictionary: MatchControlDictionary
   language: Language
   isFinalStatus: boolean
   onEditClock?: () => void
+  matchId: string
 }) {
   const startDate = detail.startAt
     ? formatTimestamp(detail.startAt, language, {
@@ -468,10 +506,10 @@ function MatchOverviewCard({
         home={home}
         away={away}
         periodLabel={periodLabel}
-        clockLabel={clockLabel}
         statusLabel={statusLabel}
         competitionName={detail.competitionName}
         onEditClock={onEditClock}
+        matchId={matchId}
       />
       <div className="grid gap-3 md:grid-cols-2">
         <InfoTile label={dictionary.overview.startLabel} value={startDate} />

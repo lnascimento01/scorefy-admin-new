@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { isAxiosError } from 'axios'
 import { MatchesGateway } from '@/modules/matches/services/matches.service'
 import type { MatchControlSnapshot } from '@/modules/matches/types'
 import { MatchControlGateway } from '../services/match-control.service'
@@ -13,13 +12,7 @@ import type {
   MatchSide
 } from '../types'
 import { resolveMatchQuickActions } from '../utils/quickActions'
-import { formatClock } from '../utils/time'
 import { useI18n } from '@/lib/i18n'
-
-export type MatchControlAction = 'start' | 'pause' | 'resume' | 'finish' | 'finishPeriod' | 'cancel'
-interface ControlActionPayload {
-  reason?: string
-}
 
 export function useMatchControl(matchId: string | null) {
   const { dictionary } = useI18n()
@@ -29,13 +22,11 @@ export function useMatchControl(matchId: string | null) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
-  const [controlLoading, setControlLoading] = useState<MatchControlAction | null>(null)
   const [eventLoading, setEventLoading] = useState(false)
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null)
   const [pendingEvents, setPendingEvents] = useState(0)
   const [networkStatus] = useState<'online' | 'offline'>('online')
   const [timeoutState, setTimeoutState] = useState<{ team: MatchSide; remaining: number } | null>(null)
-  const [controlError, setControlError] = useState<string | null>(null)
 
   const quickActions = useMemo(() => resolveMatchQuickActions(dictionary.matchControl), [dictionary.matchControl])
 
@@ -119,95 +110,6 @@ export function useMatchControl(matchId: string | null) {
     }
   }, [detail, matchId])
 
-useEffect(() => {
-  if (!matchId) return undefined
-  const interval = window.setInterval(() => {
-    refreshSnapshot().catch(() => undefined)
-    refreshEvents().catch(() => undefined)
-  }, 8000)
-  const handleVisibility = () => {
-    if (document.visibilityState === 'visible') {
-      refreshSnapshot().catch(() => undefined)
-      refreshEvents().catch(() => undefined)
-    }
-  }
-  document.addEventListener('visibilitychange', handleVisibility)
-  window.addEventListener('focus', handleVisibility)
-  return () => {
-    window.clearInterval(interval)
-    document.removeEventListener('visibilitychange', handleVisibility)
-    window.removeEventListener('focus', handleVisibility)
-  }
-}, [matchId, refreshSnapshot, refreshEvents])
-
-  const runControlAction = useCallback(
-    async (action: MatchControlAction, payload?: ControlActionPayload) => {
-      if (!matchId) return
-      setControlLoading(action)
-      try {
-        let state: MatchControlSnapshot | null = null
-        if (action === 'start') {
-          state = await MatchControlGateway.start(matchId)
-        } else if (action === 'pause') {
-          state = await MatchControlGateway.pause(matchId, payload?.reason ? { reason: payload.reason } : undefined)
-        } else if (action === 'resume') {
-          const currentStatus = snapshot?.status?.toLowerCase()
-          if (currentStatus && ['halftime', 'interval'].includes(currentStatus)) {
-            state = await MatchControlGateway.startSecondHalf(matchId)
-          } else {
-            state = await MatchControlGateway.resume(matchId)
-          }
-        } else if (action === 'finish') {
-          state = await MatchControlGateway.finish(matchId)
-        } else if (action === 'finishPeriod') {
-          state = await MatchControlGateway.endPeriod(matchId)
-        } else if (action === 'cancel') {
-          state = await MatchControlGateway.cancel(matchId)
-        }
-        if (state) setSnapshot(state)
-        setActionMessage('Status atualizado com sucesso.')
-        await refreshEvents()
-      } catch (err) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn('Failed to update match status', err)
-        }
-        const friendlyMessage = resolveControlActionError(err)
-        if (friendlyMessage) {
-          setControlError(friendlyMessage)
-        } else {
-          setActionMessage('Falha ao atualizar o status da partida.')
-        }
-      } finally {
-        setControlLoading(null)
-      }
-    },
-    [matchId, refreshEvents, snapshot?.status]
-  )
-
-  const adjustClock = useCallback(
-    async (targetSeconds: number) => {
-      if (!matchId) return
-      try {
-        const current = snapshot?.elapsedSeconds ?? 0
-        const delta = targetSeconds - current
-        const state = await MatchControlGateway.adjustClock(matchId, delta)
-        if (state) setSnapshot(state)
-        setActionMessage('Cronômetro atualizado com sucesso.')
-      } catch (err) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn('Failed to adjust clock', err)
-        }
-        const friendlyMessage = resolveControlActionError(err)
-        if (friendlyMessage) {
-          setControlError(friendlyMessage)
-        } else {
-          setActionMessage('Não foi possível atualizar o cronômetro.')
-        }
-      }
-    },
-    [matchId, snapshot?.elapsedSeconds]
-  )
-
   const triggerQuickAction = useCallback(
     async (action: MatchQuickAction, options: { team: MatchSide; playerId?: string } | null) => {
       if (!matchId || !detail || !options) return
@@ -238,11 +140,6 @@ useEffect(() => {
     [detail, matchId, refreshEvents, refreshSnapshot, snapshot]
   )
 
-  const clockLabel = useMemo(() => {
-    if (!snapshot) return '00:00'
-    return formatClock(snapshot.elapsedSeconds ?? 0)
-  }, [snapshot])
-
   return {
     detail,
     snapshot,
@@ -252,10 +149,7 @@ useEffect(() => {
     error,
     actionMessage,
     clearMessage: () => setActionMessage(null),
-    controlLoading,
     eventLoading,
-    clockLabel,
-    runControlAction,
     triggerQuickAction,
     refreshEvents,
     reload: () => loadAll(),
@@ -263,10 +157,7 @@ useEffect(() => {
     pendingEvents,
     networkStatus,
     timeoutState,
-    clearTimeout: () => setTimeoutState(null),
-    controlError,
-    clearControlError: () => setControlError(null),
-    adjustClock
+    clearTimeout: () => setTimeoutState(null)
   }
 }
 
@@ -285,19 +176,4 @@ function mergeEvents(staticEvents: MatchControlEvent[], dynamicEvents: MatchCont
     map.set(event.id, event)
   })
   return sortEvents(Array.from(map.values()))
-}
-
-function resolveControlActionError(error: unknown): string | null {
-  if (isAxiosError(error) && error.response?.status === 422) {
-    const data = error.response.data as { message?: unknown; errors?: Record<string, unknown> }
-    if (typeof data?.message === 'string' && data.message.trim()) {
-      return data.message
-    }
-    const stateError = data?.errors?.state
-    if (Array.isArray(stateError) && typeof stateError[0] === 'string') {
-      return stateError[0]
-    }
-    return 'Ação não permitida no estado atual.'
-  }
-  return null
 }

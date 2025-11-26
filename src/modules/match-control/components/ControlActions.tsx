@@ -1,6 +1,6 @@
 'use client'
 
-import type { MatchControlAction } from '../hooks/useMatchControl'
+import type { MatchControlAction } from '../hooks/useMatchActions'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/lib/i18n'
 import type { Language } from '@/lib/i18n'
