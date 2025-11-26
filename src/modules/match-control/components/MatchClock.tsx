@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { PauseCircle, PlayCircle } from 'lucide-react'
-import { useMatchClock } from '../hooks/useMatchClock'
+import type { MatchClockState } from '../hooks/useMatchClock'
 
 function formatClock(seconds: number) {
   const minutes = Math.floor(seconds / 60)
@@ -10,9 +10,8 @@ function formatClock(seconds: number) {
   return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
 }
 
-export function MatchClock({ matchId }: { matchId: string | number }) {
-  const { seconds, isRunning } = useMatchClock(matchId)
-
+export function MatchClock({ state }: { state: MatchClockState }) {
+  const { seconds, isRunning } = state
   const statusLabel = useMemo(() => (isRunning ? 'Rodando' : 'Pausado'), [isRunning])
   const StatusIcon = isRunning ? PlayCircle : PauseCircle
 

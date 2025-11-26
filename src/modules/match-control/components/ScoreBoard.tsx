@@ -1,6 +1,7 @@
 'use client'
 
 import type { MatchControlTeamInfo } from '../types'
+import type { MatchClockState } from '../hooks/useMatchClock'
 import { useI18n } from '@/lib/i18n'
 import { Clock3 } from 'lucide-react'
 import { MatchClock } from './MatchClock'
@@ -12,7 +13,7 @@ interface ScoreBoardProps {
   statusLabel?: string
   competitionName?: string
   onEditClock?: () => void
-  matchId: string
+  clockState: MatchClockState
 }
 
 export function ScoreBoard({
@@ -22,7 +23,7 @@ export function ScoreBoard({
   statusLabel,
   competitionName,
   onEditClock,
-  matchId
+  clockState
 }: ScoreBoardProps) {
   const { dictionary } = useI18n()
   const labels = dictionary.matchControl.scoreboard
@@ -42,7 +43,7 @@ export function ScoreBoard({
         <TeamInfo team={home} align="end" />
         <div className="flex flex-col items-center gap-2 text-center">
           <p className="text-xs uppercase tracking-wide text-textSecondary">{labels.matchTime}</p>
-          <MatchClock matchId={matchId} />
+          <MatchClock state={clockState} />
           {onEditClock && (
             <button
               type="button"

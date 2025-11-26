@@ -8,7 +8,7 @@ export type MatchControlAction =
   | 'pause'
   | 'resume'
   | 'finish'
-  | 'finishPeriod'
+  | 'startNextPeriod'
   | 'cancel'
   | 'adjustTime'
 
@@ -19,7 +19,7 @@ const actionPath: Record<MatchControlAction, string> = {
   pause: 'pause',
   resume: 'resume',
   finish: 'finish',
-  finishPeriod: 'periods/finalize',
+  startNextPeriod: 'second-half',
   cancel: 'cancel',
   adjustTime: 'adjust-time'
 }
@@ -62,7 +62,7 @@ export function useMatchActions() {
     pause: (matchId: string | number, payload?: { reason?: string }) => run(matchId, 'pause', payload),
     resume: (matchId: string | number) => run(matchId, 'resume'),
     finish: (matchId: string | number) => run(matchId, 'finish'),
-    finishPeriod: (matchId: string | number) => run(matchId, 'finishPeriod'),
+    startNextPeriod: (matchId: string | number) => run(matchId, 'startNextPeriod'),
     cancel: (matchId: string | number) => run(matchId, 'cancel'),
     adjustTime: (matchId: string | number, seconds: number) => run(matchId, 'adjustTime', { seconds })
   }

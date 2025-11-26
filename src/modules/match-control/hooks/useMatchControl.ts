@@ -13,11 +13,15 @@ import type {
 } from '../types'
 import { resolveMatchQuickActions } from '../utils/quickActions'
 import { useI18n } from '@/lib/i18n'
+import type { MatchTimeEvent } from './useMatchClock'
+import { getEcho } from '@/lib/echo'
+import { normalizeMatchEvents } from '../utils/normalizers'
 
 export function useMatchControl(matchId: string | null) {
   const { dictionary } = useI18n()
   const [detail, setDetail] = useState<MatchControlDetail | null>(null)
   const [snapshot, setSnapshot] = useState<MatchControlSnapshot | null>(null)
+  const [initialClock, setInitialClock] = useState<MatchTimeEvent | null>(null)
   const [events, setEvents] = useState<MatchControlEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -34,7 +38,8 @@ export function useMatchControl(matchId: string | null) {
     if (!matchId) return
     try {
       const state = await MatchControlGateway.fetchState(matchId)
-      setSnapshot(state)
+      setSnapshot(state.snapshot)
+      setInitialClock(state.initialClock)
       setLastSyncAt(new Date().toISOString())
     } catch (err) {
       if (process.env.NODE_ENV !== 'production') {
@@ -49,7 +54,7 @@ export function useMatchControl(matchId: string | null) {
     setError(null)
     try {
       const detailResponse = await MatchesGateway.getById(matchId)
-      const [snapshotResponse, eventList] = await Promise.all([
+      const [stateResponse, eventList] = await Promise.all([
         MatchControlGateway.fetchState(matchId),
         MatchEventsGateway.list(matchId, {
           homeTeamId: detailResponse.homeTeam.id,
@@ -57,7 +62,8 @@ export function useMatchControl(matchId: string | null) {
         })
       ])
       setDetail(detailResponse)
-      setSnapshot(snapshotResponse)
+      setSnapshot(stateResponse.snapshot)
+      setInitialClock(stateResponse.initialClock)
       setEvents(mergeEvents(detailResponse.events, eventList))
       setLastSyncAt(new Date().toISOString())
       setPendingEvents(0)
@@ -140,6 +146,44 @@ export function useMatchControl(matchId: string | null) {
     [detail, matchId, refreshEvents, refreshSnapshot, snapshot]
   )
 
+  useEffect(() => {
+    if (!matchId) return undefined
+    let cancelled = false
+    let channel: ReturnType<NonNullable<Awaited<ReturnType<typeof getEcho>>>['private']> | null = null
+
+    const subscribe = async () => {
+      try {
+        const echo = await getEcho()
+        if (!echo || cancelled) return
+
+        const channelName = `matches.${matchId}`
+        channel = echo.private(channelName)
+        channel.listen('.MatchEventCreated', (event: unknown) => {
+          const normalized = normalizeMatchEvents(
+            Array.isArray(event) ? event : [event],
+            detail?.homeTeam.id,
+            detail?.awayTeam.id
+          )
+          if (!normalized.length) return
+          setEvents((prev) => mergeEvents(prev, normalized))
+        })
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('Failed to subscribe to MatchEventCreated', error)
+        }
+      }
+    }
+
+    subscribe()
+
+    return () => {
+      cancelled = true
+      if (channel) {
+        channel.stopListening('.MatchEventCreated')
+      }
+    }
+  }, [matchId, detail?.homeTeam.id, detail?.awayTeam.id])
+
   return {
     detail,
     snapshot,
@@ -157,7 +201,8 @@ export function useMatchControl(matchId: string | null) {
     pendingEvents,
     networkStatus,
     timeoutState,
-    clearTimeout: () => setTimeoutState(null)
+    clearTimeout: () => setTimeoutState(null),
+    initialClock
   }
 }
 

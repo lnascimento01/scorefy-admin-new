@@ -15,6 +15,7 @@ import { ControlActions } from '@/modules/match-control/components/ControlAction
 import { GoalSelectionDialog } from '@/modules/match-control/components/GoalSelectionDialog'
 import { useMatchControl } from '@/modules/match-control/hooks/useMatchControl'
 import { useMatchActions, type MatchControlAction } from '@/modules/match-control/hooks/useMatchActions'
+import { useMatchClock, type MatchClockState } from '@/modules/match-control/hooks/useMatchClock'
 import type {
   MatchControlParticipant,
   MatchQuickAction,
@@ -63,12 +64,14 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
     timeoutState,
     clearTimeout
   } = useMatchControl(matchId)
+  // subscribe immediately on mount so the initial event is captured, seeding with backend clock if present
+  const matchClockState = useMatchClock(matchId, snapshot ?? undefined)
   const {
     start,
     pause,
     resume,
     finish,
-    finishPeriod,
+    startNextPeriod,
     cancel,
     adjustTime,
     loadingAction,
@@ -120,7 +123,7 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
   const canResume = !isCanceledState && (isPausedState || isIntervalState || isFinalStatus)
   const canPause = !isFinalStatus && isInProgress
   const canFinish = !isFinalStatus && (isInProgress || isPausedState || isIntervalState)
-  const canFinishPeriod = !isFinalStatus && (isInProgress || isIntervalState)
+  const canStartNextPeriod = !isCanceledState && isIntervalState
   const canCancelMatch = !isFinalStatus && !isCanceledState
 
   const handleQuickAction = (action: MatchQuickAction) => {
@@ -215,13 +218,13 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
         if (action === 'pause') await pause(matchId, payload)
         if (action === 'resume') await resume(matchId)
         if (action === 'finish') await finish(matchId)
-        if (action === 'finishPeriod') await finishPeriod(matchId)
+        if (action === 'startNextPeriod') await startNextPeriod(matchId)
         if (action === 'cancel') await cancel(matchId)
       } finally {
         await reload()
       }
     },
-    [cancel, finish, finishPeriod, matchId, pause, reload, resume, start]
+    [cancel, finish, matchId, pause, reload, resume, start, startNextPeriod]
   )
 
   useEffect(() => {
@@ -356,7 +359,7 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
                 language={language}
                 isFinalStatus={isFinalStatus}
                 onEditClock={() => setClockDialogOpen(true)}
-                matchId={matchId}
+                clockState={matchClockState}
               />
 
               <div className="grid gap-6 xl:grid-cols-[2.2fr_0.8fr]">
@@ -400,7 +403,7 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
                     canPause={Boolean(canPause)}
                     canResume={Boolean(canResume)}
                     canFinish={Boolean(canFinish)}
-                    canFinishPeriod={Boolean(canFinishPeriod)}
+                    canStartNextPeriod={Boolean(canStartNextPeriod)}
                     canCancel={Boolean(canCancelMatch)}
                     loadingAction={loadingAction}
                     onAction={(action, payload) => handleControlAction(action, payload)}
@@ -472,7 +475,7 @@ function MatchOverviewCard({
   language,
   isFinalStatus,
   onEditClock,
-  matchId
+  clockState
 }: {
   detail: MatchControlDetail
   home: MatchControlTeamInfo
@@ -483,7 +486,7 @@ function MatchOverviewCard({
   language: Language
   isFinalStatus: boolean
   onEditClock?: () => void
-  matchId: string
+  clockState: MatchClockState
 }) {
   const startDate = detail.startAt
     ? formatTimestamp(detail.startAt, language, {
@@ -509,7 +512,7 @@ function MatchOverviewCard({
         statusLabel={statusLabel}
         competitionName={detail.competitionName}
         onEditClock={onEditClock}
-        matchId={matchId}
+        clockState={clockState}
       />
       <div className="grid gap-3 md:grid-cols-2">
         <InfoTile label={dictionary.overview.startLabel} value={startDate} />

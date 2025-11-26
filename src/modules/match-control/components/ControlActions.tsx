@@ -17,7 +17,7 @@ interface ControlActionsProps {
   canPause: boolean
   canResume: boolean
   canFinish: boolean
-  canFinishPeriod: boolean
+  canStartNextPeriod: boolean
   canCancel: boolean
   loadingAction: MatchControlAction | null
   onAction: (action: MatchControlAction, payload?: { reason?: string }) => void
@@ -31,7 +31,7 @@ export function ControlActions({
   canPause,
   canResume,
   canFinish,
-  canFinishPeriod,
+  canStartNextPeriod,
   canCancel,
   loadingAction,
   onAction,
@@ -99,32 +99,32 @@ export function ControlActions({
       label: copy.buttons.pause,
       loadingLabel: copy.buttons.pausing,
       icon: PauseCircle,
-      variant: 'secondary',
-      highlight: 'text-amber-200',
-      enabled: canPause
-    },
-    {
-      action: 'finish',
-      label: copy.buttons.finish,
-      loadingLabel: copy.buttons.finishing,
-      icon: Flag,
-      variant: 'outline',
-      highlight: 'text-primary',
-      enabled: canFinish
-    },
-    {
-      action: 'finishPeriod',
-      label: copy.buttons.finishPeriod,
-      loadingLabel: copy.buttons.finishingPeriod,
-      icon: Timer,
-      variant: 'outline',
-      highlight: 'text-sky-300',
-      enabled: canFinishPeriod
-    },
-    {
-      action: 'cancel',
-      label: copy.buttons.cancel,
-      loadingLabel: copy.buttons.canceling,
+    variant: 'secondary',
+    highlight: 'text-amber-200',
+    enabled: canPause
+  },
+  {
+    action: 'finish',
+    label: copy.buttons.finish,
+    loadingLabel: copy.buttons.finishing,
+    icon: Flag,
+    variant: 'outline',
+    highlight: 'text-primary',
+    enabled: canFinish
+  },
+  {
+    action: 'startNextPeriod',
+    label: copy.buttons.startNextPeriod,
+    loadingLabel: copy.buttons.startingNextPeriod,
+    icon: Timer,
+    variant: 'secondary',
+    highlight: 'text-sky-300',
+    enabled: canStartNextPeriod
+  },
+  {
+    action: 'cancel',
+    label: copy.buttons.cancel,
+    loadingLabel: copy.buttons.canceling,
       icon: Octagon,
       variant: 'outline',
       highlight: 'text-primary',
@@ -200,7 +200,7 @@ export function ControlActions({
             <span className="font-semibold text-textPrimary">{statusLabel}</span>
           </span>
           <span className="text-xs text-textSecondary opacity-80">
-            {copy.nextPeriod} • {copy.finishPeriod}
+            {copy.nextPeriod} • {copy.startNextPeriod}
           </span>
         </div>
       </div>

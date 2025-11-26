@@ -2,7 +2,8 @@ import { getApi } from '@/services/api'
 import type { MatchControlEvent } from '../types'
 import { normalizeMatchEvents } from '../utils/normalizers'
 
-const MATCHES_PATH = (process.env.NEXT_PUBLIC_MATCHES_PATH ?? '/v1/auth/matches').replace(/\/$/, '')
+// All event endpoints must target v2 auth matches (do not allow fallback to v1)
+const MATCHES_PATH = '/v2/auth/matches'
 
 export interface CreateMatchEventPayload {
   matchId: string | number
@@ -21,7 +22,7 @@ export const MatchEventsGateway = {
     const id = String(matchId ?? '').trim()
     if (!id) throw new Error('Match identifier is required.')
     const api = await getApi()
-    const { data } = await api.get(`${MATCHES_PATH}/${id}/events`, {
+    const { data } = await api.get(`${MATCHES_PATH}/${id}/events/list`, {
       params: { sort: '-match_time_seconds' }
     })
     const events = Array.isArray(data?.data) ? data.data : data

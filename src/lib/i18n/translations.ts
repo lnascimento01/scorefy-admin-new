@@ -202,7 +202,7 @@ export const translations = {
         resumeConfirm: 'Retomar esta partida agora?',
         resumeDescription: 'Isso sincronizará o cronômetro e reativará os eventos em tempo real.',
         nextPeriod: 'Próximo período',
-        finishPeriod: 'Finalizar período',
+        startNextPeriod: 'Iniciar próximo período',
         buttons: {
           start: 'Iniciar partida',
           starting: 'Iniciando...',
@@ -212,8 +212,8 @@ export const translations = {
           pausing: 'Pausando...',
           finish: 'Encerrar partida',
           finishing: 'Encerrando...',
-          finishPeriod: 'Encerrar período',
-          finishingPeriod: 'Encerrando período...',
+          startNextPeriod: 'Iniciar próximo período',
+          startingNextPeriod: 'Iniciando próximo período...',
           cancel: 'Cancelar partida',
           canceling: 'Cancelando...'
         },
@@ -435,7 +435,7 @@ export const translations = {
         resumeConfirm: 'Resume this match now?',
         resumeDescription: 'This will sync the clock and enable live event tracking again.',
         nextPeriod: 'Next period',
-        finishPeriod: 'Finish period',
+        startNextPeriod: 'Start next period',
         buttons: {
           start: 'Start match',
           starting: 'Starting...',
@@ -445,8 +445,8 @@ export const translations = {
           pausing: 'Pausing...',
           finish: 'End match',
           finishing: 'Ending...',
-          finishPeriod: 'End period',
-          finishingPeriod: 'Ending period...',
+          startNextPeriod: 'Start next period',
+          startingNextPeriod: 'Starting next period...',
           cancel: 'Cancel match',
           canceling: 'Cancelling...'
         },
@@ -668,7 +668,7 @@ export const translations = {
         resumeConfirm: '¿Deseas reanudar este partido ahora?',
         resumeDescription: 'Esto sincronizará el reloj y permitirá registrar eventos en vivo nuevamente.',
         nextPeriod: 'Próximo período',
-        finishPeriod: 'Finalizar período',
+        startNextPeriod: 'Iniciar próximo período',
         buttons: {
           start: 'Iniciar partido',
           starting: 'Iniciando...',
@@ -678,8 +678,8 @@ export const translations = {
           pausing: 'Pausando...',
           finish: 'Terminar partido',
           finishing: 'Terminando...',
-          finishPeriod: 'Cerrar período',
-          finishingPeriod: 'Cerrando período...',
+          startNextPeriod: 'Iniciar próximo período',
+          startingNextPeriod: 'Iniciando próximo período...',
           cancel: 'Cancelar partido',
           canceling: 'Cancelando...'
         },
