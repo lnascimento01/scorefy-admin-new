@@ -42,8 +42,9 @@ export function MatchesPage({ currentUser }: { currentUser: AuthProfile }) {
   const competitionOptions = useMemo(() => {
     const map = new Map<string, string>()
     matches.forEach((match) => {
-      if (match.competitionId) {
-        map.set(match.competitionId, match.competitionName)
+      if (match.competitionSeasonId) {
+        const label = `${match.competitionName}${match.competitionSeason ? ` • ${match.competitionSeason}` : ''}`
+        map.set(match.competitionSeasonId, label)
       }
     })
     return Array.from(map.entries()).map(([value, label]) => ({ value, label }))
@@ -94,7 +95,7 @@ export function MatchesPage({ currentUser }: { currentUser: AuthProfile }) {
 
         <MatchesFilters
           searchValue={searchValue}
-          competitionValue={filters.competitionId ?? 'all'}
+          competitionValue={filters.competitionSeasonId ?? 'all'}
           statusValue={filters.status ?? 'all'}
           dateValue={filters.date}
           competitionOptions={competitionOptions}

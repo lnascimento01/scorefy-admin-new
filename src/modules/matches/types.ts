@@ -15,6 +15,7 @@ export interface MatchSummary {
   timeLabel: string
   competitionName: string
   competitionId?: string
+  competitionSeasonId?: string
   competitionSeason?: string
   venue?: string
   home: { name: string; short?: string }
@@ -37,7 +38,7 @@ export interface MatchListFilters {
   perPage?: number
   search?: string
   status?: MatchStatus | 'all'
-  competitionId?: string
+  competitionSeasonId?: string
   date?: string
 }
 
@@ -72,7 +73,7 @@ export interface MatchControlSnapshot {
 }
 
 export interface MatchCreatePayload {
-  competitionId: string
+  competitionSeasonId: string
   homeTeamId: string
   awayTeamId: string
   startAt: string
@@ -85,7 +86,7 @@ export interface MatchUpdatePlayersPayload {
 }
 
 export interface MatchUpdatePayload {
-  competitionId?: string
+  competitionSeasonId?: string
   homeTeamId?: string
   awayTeamId?: string
   startAt?: string

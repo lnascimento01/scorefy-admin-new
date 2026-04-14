@@ -91,19 +91,23 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
   const router = useRouter()
   const {
     competitions,
+    seasons,
     teams,
     venues,
     loadingCatalog,
+    loadingSeasons,
     loadingTeams,
     submitting,
     error,
     created,
     reloadCatalog,
+    loadSeasons,
     loadTeams,
     create
   } = useMatchCreation()
 
   const [competitionId, setCompetitionId] = useState('')
+  const [seasonId, setSeasonId] = useState('')
   const [homeTeamId, setHomeTeamId] = useState('')
   const [awayTeamId, setAwayTeamId] = useState('')
   const [venueId, setVenueId] = useState('')
@@ -115,10 +119,10 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
   const [localError, setLocalError] = useState<string | null>(null)
 
   const filteredTeams = useMemo(() => {
-    if (!competitionId) return teams
-    const fromCompetition = teams.filter((team) => team.competitionId === competitionId)
-    return fromCompetition.length ? fromCompetition : teams
-  }, [competitionId, teams])
+    if (!seasonId) return teams
+    const fromSeason = teams.filter((team) => team.competitionId === seasonId)
+    return fromSeason.length ? fromSeason : teams
+  }, [seasonId, teams])
 
   const allDisabled = submitting || loadingCatalog
 
@@ -126,7 +130,7 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
     event.preventDefault()
     setLocalError(null)
 
-    if (!competitionId || !homeTeamId || !awayTeamId || !startAt) {
+    if (!competitionId || !seasonId || !homeTeamId || !awayTeamId || !startAt) {
       setLocalError('Preencha todos os campos obrigatórios.')
       return
     }
@@ -142,7 +146,7 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
     }
 
     const payload: MatchCreatePayload = {
-      competitionId,
+      competitionSeasonId: seasonId,
       homeTeamId,
       awayTeamId,
       startAt: startAtIso,
@@ -174,10 +178,10 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary/15 text-secondary">
                 <Shield className="h-5 w-5" />
               </div>
-              <div>
-                <p className="text-base font-semibold text-textPrimary">Dados da partida</p>
-                <p className="text-sm text-textSecondary">Preencha campos mínimos exigidos pelo endpoint de criação.</p>
-              </div>
+            <div>
+              <p className="text-base font-semibold text-textPrimary">Dados da partida</p>
+              <p className="text-sm text-textSecondary">Selecione competição e temporada para operar com `competition_season_id`.</p>
+            </div>
             </div>
 
             {(error || localError) && (
@@ -222,7 +226,11 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
                   onChange={(event) => {
                     const value = event.target.value
                     setCompetitionId(value)
-                    loadTeams(value)
+                    setSeasonId('')
+                    setHomeTeamId('')
+                    setAwayTeamId('')
+                    loadTeams()
+                    loadSeasons(value)
                   }}
                   disabled={allDisabled}
                 >
@@ -230,6 +238,30 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
                   {competitions.map((competition) => (
                     <option key={competition.id} value={competition.id}>
                       {competition.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <span className="flex items-center gap-2 text-sm font-semibold text-textPrimary">
+                  <Shield className="h-4 w-4 text-textSecondary" />
+                  Temporada *
+                </span>
+                <Select
+                  value={seasonId}
+                  onChange={(event) => {
+                    const value = event.target.value
+                    setSeasonId(value)
+                    loadTeams(value)
+                    setHomeTeamId('')
+                    setAwayTeamId('')
+                  }}
+                  disabled={allDisabled || loadingSeasons || !competitionId}
+                >
+                  <option value="">Selecione a temporada</option>
+                  {seasons.map((season) => (
+                    <option key={season.id} value={season.id}>
+                      {season.label}
                     </option>
                   ))}
                 </Select>
@@ -260,7 +292,7 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
                 <Select
                   value={homeTeamId}
                   onChange={(event) => setHomeTeamId(event.target.value)}
-                  disabled={allDisabled || loadingTeams}
+                  disabled={allDisabled || loadingTeams || !seasonId}
                 >
                   <option value="">Selecione o mandante</option>
                   {filteredTeams.map((team) => (
@@ -278,7 +310,7 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
                 <Select
                   value={awayTeamId}
                   onChange={(event) => setAwayTeamId(event.target.value)}
-                  disabled={allDisabled || loadingTeams}
+                  disabled={allDisabled || loadingTeams || !seasonId}
                 >
                   <option value="">Selecione o visitante</option>
                   {filteredTeams.map((team) => (

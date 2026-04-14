@@ -142,6 +142,22 @@ h6 {
     background: var(--color-text-primary);
     border-radius: 999px;
   }
+
+  select,
+  option,
+  optgroup {
+    color: var(--color-text-primary);
+    background-color: var(--surface-elevated);
+  }
+
+  :root[data-theme='dark'] select,
+  .dark select {
+    color-scheme: dark;
+  }
+
+  select:disabled {
+    color: var(--color-text-placeholder);
+  }
 }
 
 @layer components {

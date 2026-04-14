@@ -66,7 +66,13 @@ export function normalizeMatchSummary(payload: unknown): MatchSummary | null {
   const competition = (record.competition ?? {}) as Record<string, unknown>
   const competitionId = asString(competition.id ?? record.competition_id)
   const competitionName = asString(competition.name ?? record.competition_name) ?? 'Competição indefinida'
-  const competitionSeason = asString(competition.season)
+  const competitionSeasonId = asString(
+    competition.season_id ??
+      competition.competition_season_id ??
+      record.competition_season_id ??
+      record.competitionSeasonId
+  )
+  const competitionSeason = asString(competition.season ?? record.competition_season)
   const venue = asString((record.venue as Record<string, unknown> | undefined)?.name ?? record.venue_name)
   const homeScore = asNumber(record.home_score ?? homeTeam?.score)
   const awayScore = asNumber(record.away_score ?? awayTeam?.score)
@@ -79,6 +85,7 @@ export function normalizeMatchSummary(payload: unknown): MatchSummary | null {
     timeLabel,
     competitionName,
     competitionId: competitionId ?? undefined,
+    competitionSeasonId: competitionSeasonId ?? undefined,
     competitionSeason: competitionSeason ?? undefined,
     venue: venue ?? undefined,
     home: {

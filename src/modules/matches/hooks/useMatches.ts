@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { MatchesGateway } from '../services/matches.service'
 import { MatchListFilters, MatchListMeta, MatchListResult, MatchStatus } from '../types'
+import { resolveSeasonAmbiguity } from '../utils/errors'
 
 const DEFAULT_META: MatchListMeta = {
   currentPage: 1,
@@ -27,15 +28,16 @@ export function useMatches({ initialFilters }: UseMatchesOptions = {}) {
       setFilters(nextFilters)
       setLoading(true)
       setError(null)
-      try {
-        const result = await MatchesGateway.list(nextFilters)
-        setData(result)
-      } catch (err) {
-        console.error('Failed to load matches', err)
-        setError('Não foi possível carregar as partidas.')
-      } finally {
-        setLoading(false)
-      }
+    try {
+      const result = await MatchesGateway.list(nextFilters)
+      setData(result)
+    } catch (err) {
+      console.error('Failed to load matches', err)
+      const ambiguous = resolveSeasonAmbiguity(err)
+      setError(ambiguous ?? 'Não foi possível carregar as partidas.')
+    } finally {
+      setLoading(false)
+    }
     },
     [filters],
   )
@@ -57,7 +59,7 @@ export function useMatches({ initialFilters }: UseMatchesOptions = {}) {
     error,
     filters,
     setStatusFilter: (status: MatchStatus | 'all') => updateFilter({ status }),
-    setCompetitionFilter: (competitionId: string) => updateFilter({ competitionId }),
+    setCompetitionFilter: (competitionSeasonId: string) => updateFilter({ competitionSeasonId }),
     setDateFilter: (date?: string) => updateFilter({ date: date || undefined }),
     setSearchFilter: (search?: string) => updateFilter({ search }),
     setPage: (page: number) => fetchMatches({ page }).catch(() => undefined),

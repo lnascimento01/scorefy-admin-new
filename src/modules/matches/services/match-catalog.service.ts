@@ -7,6 +7,7 @@ export interface CatalogOption {
   helper?: string
   shortName?: string
   competitionId?: string
+  season?: string
   metadata?: Record<string, unknown>
 }
 
@@ -29,12 +30,10 @@ function normalizeCompetitionOption(raw: Record<string, unknown>): CatalogOption
   const id = asString(raw.id)
   const name = asString(raw.name)
   if (!id || !name) return null
-  const season = asString(raw.season ?? raw.season_label ?? raw.seasonLabel)
   return {
     id,
-    label: season ? `${name} (${season})` : name,
-    helper: season ?? undefined,
-    metadata: { season }
+    label: name,
+    metadata: {}
   }
 }
 
@@ -43,7 +42,7 @@ function normalizeTeamOption(raw: Record<string, unknown>): CatalogOption | null
   const name = asString(raw.name ?? raw.team_name)
   if (!id || !name) return null
   const shortName = asString(raw.short_name ?? raw.shortName)
-  const competitionId = asString(raw.competition_id ?? raw.competitionId)
+  const competitionId = asString(raw.competition_id ?? raw.competitionId ?? raw.competition_season_id ?? raw.competitionSeasonId)
   const city = asString(raw.city ?? raw.location)
   const helper = shortName ?? city ?? undefined
 
@@ -54,6 +53,20 @@ function normalizeTeamOption(raw: Record<string, unknown>): CatalogOption | null
     helper,
     competitionId: competitionId ?? undefined,
     metadata: { city }
+  }
+}
+
+function normalizeSeasonOption(raw: Record<string, unknown>): CatalogOption | null {
+  const id = asString(raw.id)
+  const name = asString(raw.name)
+  const season = asString(raw.season)
+  if (!id || !name || !season) return null
+  return {
+    id,
+    label: `${name} • ${season}`,
+    helper: season ?? undefined,
+    season: season ?? undefined,
+    competitionId: asString(raw.competition_id ?? raw.competitionId) ?? undefined,
   }
 }
 
@@ -91,8 +104,15 @@ export const MatchCatalogGateway = {
       .filter((item): item is CatalogOption => Boolean(item))
   },
 
-  async listTeams(competitionId?: string): Promise<CatalogOption[]> {
-    const items = await fetchList(TEAMS_PATH, competitionId ? { competition_id: competitionId } : undefined)
+  async listCompetitionSeasons(competitionId: string): Promise<CatalogOption[]> {
+    const items = await fetchList(`${COMPETITIONS_PATH}/${competitionId}/seasons`)
+    return items
+      .map((item) => (item && typeof item === 'object' ? normalizeSeasonOption(item as Record<string, unknown>) : null))
+      .filter((item): item is CatalogOption => Boolean(item))
+  },
+
+  async listTeams(competitionSeasonId?: string): Promise<CatalogOption[]> {
+    const items = await fetchList(TEAMS_PATH, competitionSeasonId ? { competition_season_id: competitionSeasonId } : undefined)
     return items
       .map((item) => (item && typeof item === 'object' ? normalizeTeamOption(item as Record<string, unknown>) : null))
       .filter((item): item is CatalogOption => Boolean(item))

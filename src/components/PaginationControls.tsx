@@ -13,18 +13,26 @@ interface PaginationControlsProps {
   meta: PaginationMeta
   isLoading?: boolean
   perPageOptions?: number[]
+  itemLabel?: string
   onPageChange?: (page: number) => void
   onPerPageChange?: (perPage: number) => void
 }
 
-export function PaginationControls({ meta, isLoading, perPageOptions = [10, 20, 50], onPageChange, onPerPageChange }: PaginationControlsProps) {
+export function PaginationControls({
+  meta,
+  isLoading,
+  perPageOptions = [10, 20, 50],
+  itemLabel = 'partidas',
+  onPageChange,
+  onPerPageChange,
+}: PaginationControlsProps) {
   const canGoPrev = meta.currentPage > 1
   const canGoNext = meta.currentPage < meta.lastPage
 
   return (
     <div className="flex flex-col gap-3 border-t border-borderSoft pt-4 text-sm text-textSecondary md:flex-row md:items-center md:justify-between">
       <div>
-        Página {meta.currentPage} de {meta.lastPage} • {meta.total} partidas
+        Página {meta.currentPage} de {meta.lastPage} • {meta.total} {itemLabel}
       </div>
       <div className="flex items-center gap-3">
         <select

@@ -22,3 +22,24 @@ export function resolveMatchActionError(error: unknown, fallbackMessage: string)
   }
   return fallbackMessage
 }
+
+export function resolveSeasonAmbiguity(error: unknown): string | null {
+  if (typeof error === 'object' && error && 'isAxiosError' in error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>
+    if (axiosError.response?.status !== 422) return null
+    const data = axiosError.response?.data
+    const errorKeys = data?.errors ? Object.keys(data.errors) : []
+    const hasSeasonKey =
+      errorKeys.includes('competition_season_id') ||
+      errorKeys.includes('competitionSeasonId') ||
+      errorKeys.includes('season') ||
+      errorKeys.includes('competition_season')
+    if (hasSeasonKey) {
+      return 'Selecione uma temporada para continuar.'
+    }
+    if (typeof data?.message === 'string' && data.message.toLowerCase().includes('temporada')) {
+      return 'Selecione uma temporada para continuar.'
+    }
+  }
+  return null
+}

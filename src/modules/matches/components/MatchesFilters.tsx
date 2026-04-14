@@ -59,7 +59,7 @@ export function MatchesFilters({
           onChange={(event) => onSearchChange(event.target.value)}
         />
         <Select value={competitionValue} onChange={(event) => onCompetitionChange(event.target.value)}>
-          <option value="all">Todas as competições</option>
+          <option value="all">Todas as temporadas</option>
           {competitionOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}

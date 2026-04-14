@@ -108,8 +108,9 @@ function MatchEditForm({
   router: ReturnType<typeof useRouter>
   editor: MatchEditorState
 }) {
-  const { competitions, teams, venues, submitting, error, success, loadTeams, update } = editor
+  const { competitions, seasons, teams, venues, submitting, error, success, loadSeasons, loadTeams, update } = editor
   const [competitionId, setCompetitionId] = useState(detail.competitionId ?? '')
+  const [seasonId, setSeasonId] = useState(detail.competitionSeasonId ?? '')
   const [homeTeamId, setHomeTeamId] = useState(detail.homeTeam.id ?? '')
   const [awayTeamId, setAwayTeamId] = useState(detail.awayTeam.id ?? '')
   const [venueId, setVenueId] = useState(detail.venueId ?? '')
@@ -117,10 +118,10 @@ function MatchEditForm({
   const [localError, setLocalError] = useState<string | null>(null)
 
   const filteredTeams = useMemo(() => {
-    if (!competitionId) return teams
-    const fromCompetition = teams.filter((team) => team.competitionId === competitionId)
-    return fromCompetition.length ? fromCompetition : teams
-  }, [competitionId, teams])
+    if (!seasonId) return teams
+    const fromSeason = teams.filter((team) => team.competitionId === seasonId)
+    return fromSeason.length ? fromSeason : teams
+  }, [seasonId, teams])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -128,6 +129,10 @@ function MatchEditForm({
 
     if (!homeTeamId || !awayTeamId) {
       setLocalError('Selecione mandante e visitante.')
+      return
+    }
+    if (!seasonId && !detail.competitionSeasonId) {
+      setLocalError('Selecione a temporada da competição.')
       return
     }
     if (homeTeamId === awayTeamId) {
@@ -141,7 +146,7 @@ function MatchEditForm({
     }
 
     await update({
-      competitionId: competitionId || detail.competitionId,
+      competitionSeasonId: seasonId || detail.competitionSeasonId,
       homeTeamId,
       awayTeamId,
       startAt: isoStart ?? detail.startAt,
@@ -157,7 +162,7 @@ function MatchEditForm({
         </div>
         <div>
           <p className="text-base font-semibold text-textPrimary">Dados da partida</p>
-          <p className="text-sm text-textSecondary">Atualize competição, times, local e data/hora.</p>
+          <p className="text-sm text-textSecondary">Atualize competição, temporada, times, local e data/hora.</p>
         </div>
       </div>
 
@@ -180,7 +185,11 @@ function MatchEditForm({
             onChange={(event) => {
               const value = event.target.value
               setCompetitionId(value)
-              loadTeams(value)
+              setSeasonId('')
+              setHomeTeamId('')
+              setAwayTeamId('')
+              loadTeams()
+              loadSeasons(value)
             }}
             disabled={submitting}
           >
@@ -188,6 +197,30 @@ function MatchEditForm({
             {competitions.map((competition) => (
               <option key={competition.id} value={competition.id}>
                 {competition.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <span className="flex items-center gap-2 text-sm font-semibold text-textPrimary">
+            <Shield className="h-4 w-4 text-textSecondary" />
+            Temporada
+          </span>
+          <Select
+            value={seasonId}
+            onChange={(event) => {
+              const value = event.target.value
+              setSeasonId(value)
+              loadTeams(value)
+              setHomeTeamId('')
+              setAwayTeamId('')
+            }}
+            disabled={submitting || !competitionId}
+          >
+            <option value="">Selecione a temporada</option>
+            {seasons.map((season) => (
+              <option key={season.id} value={season.id}>
+                {season.label}
               </option>
             ))}
           </Select>
@@ -218,7 +251,7 @@ function MatchEditForm({
           <Select
             value={homeTeamId}
             onChange={(event) => setHomeTeamId(event.target.value)}
-            disabled={submitting}
+            disabled={submitting || (!seasonId && !detail.competitionSeasonId)}
           >
             <option value="">Selecione o mandante</option>
             {filteredTeams.map((team) => (
@@ -236,7 +269,7 @@ function MatchEditForm({
           <Select
             value={awayTeamId}
             onChange={(event) => setAwayTeamId(event.target.value)}
-            disabled={submitting}
+            disabled={submitting || (!seasonId && !detail.competitionSeasonId)}
           >
             <option value="">Selecione o visitante</option>
             {filteredTeams.map((team) => (

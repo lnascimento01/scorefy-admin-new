@@ -157,6 +157,12 @@ export function normalizeMatchDetail(payload: unknown): MatchControlDetail | nul
   const homeScore = asNumber(record.home_score ?? record.homeScore) ?? 0
   const awayScore = asNumber(record.away_score ?? record.awayScore) ?? 0
   const competitionId = asString(record.competition_id ?? record.competitionId ?? (record.competition as Record<string, unknown> | undefined)?.id)
+  const competitionSeasonId = asString(
+    record.competition_season_id ??
+      record.competitionSeasonId ??
+      (record.competition as Record<string, unknown> | undefined)?.season_id ??
+      (record.competition as Record<string, unknown> | undefined)?.competition_season_id
+  )
   const venueId = asString(record.venue_id ?? record.venueId ?? (record.venue as Record<string, unknown> | undefined)?.id)
 
   const homeTeam = normalizeTeam(
@@ -203,6 +209,7 @@ export function normalizeMatchDetail(payload: unknown): MatchControlDetail | nul
     startAt: asString(record.start_at ?? record.startAt) ?? undefined,
     competitionName: asString(record.competition?.name ?? record.competition_name),
     competitionId: competitionId ?? undefined,
+    competitionSeasonId: competitionSeasonId ?? undefined,
     competitionSeason: asString(record.competition?.season ?? record.competition_season),
     venueName: asString(record.venue?.name ?? record.venue_name),
     venueId: venueId ?? undefined,

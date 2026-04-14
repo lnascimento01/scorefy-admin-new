@@ -1,8 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Pencil, Plus, RefreshCcw, Trash2 } from 'lucide-react'
+import { Filter, Pencil, Plus, RefreshCcw, Trophy, Trash2 } from 'lucide-react'
 import { DashboardShell } from '@/modules/dashboard/components/DashboardShell'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { AlertBanner } from '@/components/AlertBanner'
@@ -11,242 +11,322 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { PaginationControls } from '@/components/PaginationControls'
 import type { AuthProfile } from '@/services/auth.service'
 import { useCompetitions } from '../hooks/useCompetitions'
-import type { CompetitionSummary } from '../types'
+import { useCompetitionCatalogs } from '../hooks/useCompetitionCatalogs'
+import type { CompetitionStatus } from '../types'
 import { ConfirmModal } from '@/components/ConfirmModal'
 import { CompetitionsGateway } from '../services/competitions.service'
+import { resolveMatchActionError } from '@/modules/matches/utils/errors'
 
-function getSeasonLabel(season: Competition['season']) {
-  if (!season) return '—'
-  return season
+const statusLabel: Record<CompetitionStatus, string> = {
+  draft: 'Rascunho',
+  published: 'Publicada',
+  archived: 'Arquivada',
 }
 
-function formatUpdatedAt(value?: string) {
-  if (!value) {
-    return 'Sem registro'
-  }
-  try {
-    const date = new Date(value)
-    return date.toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  } catch (_error) {
-    return value
-  }
+const statusVariant: Record<CompetitionStatus, 'warning' | 'success' | 'info'> = {
+  draft: 'warning',
+  published: 'success',
+  archived: 'info',
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return 'Sem registro'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function formatLatestSeason(value?: { name: string; season: string } | null) {
+  if (!value) return '—'
+  return `${value.name} • ${value.season}`
 }
 
 export function CompetitionsPage({ currentUser }: { currentUser: AuthProfile }) {
   const router = useRouter()
-  const [feedback, setFeedback] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | CompetitionSummary['status']>('all')
-  const { competitions, loading, error, source, refetch } = useCompetitions()
+  const {
+    competitions,
+    meta,
+    loading,
+    error,
+    source,
+    filters,
+    setSearch,
+    setScope,
+    setTypeId,
+    setCountryId,
+    setNaipe,
+    setCategory,
+    setSort,
+    setPage,
+    setPerPage,
+    refetch,
+  } = useCompetitions()
+  const {
+    competitionTypes,
+    countries,
+    loading: loadingCatalogs,
+    error: catalogError,
+  } = useCompetitionCatalogs()
+
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [removing, setRemoving] = useState(false)
-
-  const filteredCompetitions = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase()
-    return competitions.filter((competition) => {
-      const matchesStatus =
-        statusFilter === 'all'
-          ? true
-          : statusFilter === 'active'
-            ? competition.status === 'active'
-            : competition.status === 'deleted'
-      if (!matchesStatus) return false
-      if (!term) return true
-      const haystack = [
-        competition.name,
-        competition.season ?? '',
-        competition.type ?? '',
-        competition.country ?? '',
-        competition.scope ?? '',
-        competition.naipe ?? '',
-        competition.category ?? ''
-      ]
-        .join(' ')
-        .toLowerCase()
-      return haystack.includes(term)
-    })
-  }, [competitions, searchTerm, statusFilter])
-
-  const deletedCompetitions = filteredCompetitions.filter((competition) => competition.status === 'deleted')
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const perPageOptions = [10, 20, 50, 100]
 
   return (
     <DashboardShell userName={currentUser.name} userEmail={currentUser.email}>
       <PageWrapper
         title="Competições"
-        description="Crie, edite e remova competições sincronizadas com o Scorefy."
+        description="Lista de competições fixas. Temporadas são gerenciadas dentro da competição."
         actions={
-          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-end">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex items-center gap-2"
-                onClick={() => refetch()}
-                disabled={loading}
-              >
-                <RefreshCcw className="h-4 w-4" />
-                {loading ? 'Sincronizando...' : 'Atualizar'}
-              </Button>
-              <Button onClick={() => alert('Fluxo de criação em breve')} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Nova competição
-              </Button>
-            </div>
-            <span className="text-xs font-mono text-textSecondary sm:ml-4">
-              Fonte: {source === 'api' ? 'API /v1/auth/competitions' : 'mock'}
-            </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" className="flex items-center gap-2" onClick={refetch} disabled={loading}>
+              <RefreshCcw className="h-4 w-4" />
+              {loading ? 'Sincronizando...' : 'Atualizar'}
+            </Button>
+            <Button className="flex items-center gap-2" onClick={() => router.push('/competitions/create')}>
+              <Plus className="h-4 w-4" />
+              Nova competição
+            </Button>
           </div>
         }
       >
-        <div className="space-y-4">
-          {error && <AlertBanner variant="error" message={error} />}
-          {feedback && <AlertBanner variant="success" message={feedback} />}
-          {deletedCompetitions.length > 0 && (
-            <AlertBanner variant="info" message={`${deletedCompetitions.length} competições estão marcadas como removidas.`} />
-          )}
+        <div className="space-y-2">
+          {error && <AlertBanner variant="warning" message={error} />}
+          {catalogError && <AlertBanner variant="warning" message={catalogError} />}
+          {feedback && <AlertBanner variant={feedback.type === 'success' ? 'success' : 'error'} message={feedback.message} />}
+          <AlertBanner
+            variant="info"
+            message={`Fonte: ${source === 'api' ? 'API /api/v1/auth/competitions' : 'API'}. A entidade principal é fixa; temporadas são selecionadas no detalhe.`}
+          />
         </div>
 
         <section className="card mt-6 space-y-6 p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="grid gap-4 md:grid-cols-3">
+          <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-textSecondary">
+            <Filter className="h-4 w-4" />
+            Filtros
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <label className="space-y-2 text-sm">
+              <span className="text-textSecondary">Buscar</span>
               <Input
-                placeholder="Buscar por nome, temporada ou país"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Nome da competição"
+                value={filters.q}
+                onChange={(event) => setSearch(event.target.value)}
               />
-              <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}>
-                <option value="all">Todas</option>
-                <option value="active">Ativas</option>
-                <option value="deleted">Removidas</option>
+            </label>
+
+            <label className="space-y-2 text-sm">
+              <span className="text-textSecondary">Escopo</span>
+              <Select value={filters.scope} onChange={(event) => setScope(event.target.value as typeof filters.scope)}>
+                <option value="all">Todos</option>
+                <option value="national">Nacional</option>
+                <option value="state">Estadual</option>
+                <option value="international">Internacional</option>
               </Select>
-              <div className="flex items-center justify-end text-sm text-textSecondary md:justify-start">
-                Última sincronização: dataset local
+            </label>
+
+            <label className="space-y-2 text-sm">
+              <span className="text-textSecondary">Naipe</span>
+              <Select value={filters.naipe} onChange={(event) => setNaipe(event.target.value as typeof filters.naipe)}>
+                <option value="all">Todos</option>
+                <option value="masculino">Masculino</option>
+                <option value="feminino">Feminino</option>
+                <option value="misto">Misto</option>
+              </Select>
+            </label>
+
+            <label className="space-y-2 text-sm">
+              <span className="text-textSecondary">Tipo</span>
+              <Select
+                value={filters.typeId}
+                onChange={(event) => setTypeId(event.target.value)}
+                disabled={loadingCatalogs}
+              >
+                <option value="">Todos</option>
+                {competitionTypes.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name}
+                  </option>
+                ))}
+              </Select>
+            </label>
+
+            <label className="space-y-2 text-sm">
+              <span className="text-textSecondary">País</span>
+              <Select
+                value={filters.countryId}
+                onChange={(event) => setCountryId(event.target.value)}
+                disabled={loadingCatalogs}
+              >
+                <option value="">Todos</option>
+                {countries.map((country) => (
+                  <option key={country.id} value={country.id}>
+                    {country.name}
+                  </option>
+                ))}
+              </Select>
+            </label>
+
+            <label className="space-y-2 text-sm">
+              <span className="text-textSecondary">Categoria</span>
+              <Input
+                placeholder="Adulto, Sub-18..."
+                value={filters.category}
+                onChange={(event) => setCategory(event.target.value)}
+              />
+            </label>
+
+            <label className="space-y-2 text-sm">
+              <span className="text-textSecondary">Ordenação</span>
+              <Select value={filters.sort} onChange={(event) => setSort(event.target.value as typeof filters.sort)}>
+                <option value="name">Nome (A-Z)</option>
+                <option value="-name">Nome (Z-A)</option>
+                <option value="created_at">Criada primeiro</option>
+                <option value="-created_at">Criada por último</option>
+              </Select>
+            </label>
+          </div>
+
+          <div className="rounded-2xl border border-borderSoft">
+            <div className="flex items-center justify-between border-b border-borderSoft px-4 py-3 text-sm text-textSecondary">
+              <div className="flex items-center gap-2">
+                <Trophy className="h-4 w-4" />
+                {`Exibindo ${competitions.length} de ${meta.total || competitions.length} competições`}
               </div>
+              <span className="text-xs uppercase tracking-[0.2em] text-textSecondary">
+                {source === 'api' ? 'Backend' : 'API'}
+              </span>
+            </div>
+
+            <div className="p-4">
+              {loading && (
+                <div className="rounded-xl border border-dashed border-borderSoft p-8 text-center">
+                  <p className="text-base font-semibold text-textPrimary">Carregando competições...</p>
+                </div>
+              )}
+
+              {!loading && competitions.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-borderSoft p-8 text-center">
+                  <p className="text-base font-semibold text-textPrimary">Nenhuma competição encontrada</p>
+                  <p className="text-sm text-textSecondary">Ajuste os filtros ou crie uma nova competição.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Competição</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>País / Escopo</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Temporadas</TableHead>
+                      <TableHead>Última temporada</TableHead>
+                      <TableHead>Atualização</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {competitions.map((competition) => (
+                      <TableRow key={competition.id}>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <p className="font-semibold text-textPrimary">{competition.name}</p>
+                            <p className="text-xs text-textSecondary">{competition.locale}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-sm text-textPrimary">{competition.typeName ?? '—'}</p>
+                          <p className="text-xs text-textSecondary">{competition.category ?? '—'}</p>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-sm text-textPrimary">{competition.country?.name ?? '—'}</p>
+                          <p className="text-xs text-textSecondary">{competition.scope}</p>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={statusVariant[competition.status]}>{statusLabel[competition.status]}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-sm text-textPrimary">{competition.seasonsCount ?? '—'}</p>
+                          <p className="text-xs text-textSecondary">{competition.naipe ?? '—'}</p>
+                        </TableCell>
+                        <TableCell className="text-sm text-textSecondary">
+                          {formatLatestSeason(competition.latestSeason ?? null)}
+                        </TableCell>
+                        <TableCell className="text-sm text-textSecondary">{formatDateTime(competition.updatedAt)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="flex items-center gap-1"
+                              onClick={() => router.push(`/competitions/${competition.id}/edit`)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                              Gerenciar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-secondary"
+                              onClick={() => setConfirmId(competition.id)}
+                              disabled={removing && confirmId === competition.id}
+                            >
+                              <Trash2 className="mr-1 h-4 w-4" />
+                              {removing && confirmId === competition.id ? 'Removendo...' : 'Excluir'}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </div>
           </div>
 
-          {deletedCompetitions.length > 0 && statusFilter !== 'deleted' && (
-            <AlertBanner
-              variant="info"
-              message={`${deletedCompetitions.length} competições estão na lixeira (soft delete). Filtre por "Removidas" para visualizá-las.`}
-            />
-          )}
-
-          <div className="rounded-2xl border border-borderSoft">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Temporada</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>País</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Categoria / Escopo</TableHead>
-                  <TableHead>Atualização</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCompetitions.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center text-sm text-textSecondary">
-                      Nenhuma competição encontrada com os filtros atuais.
-                    </TableCell>
-                  </TableRow>
-                )}
-                {filteredCompetitions.map((competition) => {
-                  const isDeleted = competition.status === 'deleted'
-                  const metaString = competition.meta ? JSON.stringify(competition.meta) : ''
-                  const metaSummary = metaString
-                    ? metaString.length > 80
-                      ? `${metaString.slice(0, 80)}…`
-                      : metaString
-                    : null
-                  return (
-                    <TableRow key={competition.id} className={isDeleted ? 'opacity-70' : undefined}>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <span className="font-semibold text-textPrimary">{competition.name}</span>
-                          {metaSummary && <span className="text-xs text-textSecondary/80">meta: {metaSummary}</span>}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getSeasonLabel(competition.season)}</TableCell>
-                      <TableCell>{competition.type ?? '—'}</TableCell>
-                      <TableCell>{competition.country ?? '—'}</TableCell>
-                      <TableCell>
-                        <Badge variant={isDeleted ? 'danger' : 'success'}>
-                          {isDeleted ? 'Removida' : 'Ativa'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span>{competition.category ?? '—'}</span>
-                          <span className="text-xs text-textSecondary">{competition.scope ?? '—'}</span>
-                          {competition.naipe && (
-                            <span className="text-[10px] uppercase tracking-wide text-textSecondary/70">
-                              {competition.naipe}
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-textSecondary">{formatUpdatedAt(competition.updatedAt)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="flex items-center gap-1"
-                            onClick={() => router.push(`/competitions/${competition.id}/edit`)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                            Editar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-primary"
-                            onClick={() => setConfirmId(competition.id)}
-                            disabled={removing && confirmId === competition.id}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            {removing && confirmId === competition.id ? 'Removendo...' : 'Remover'}
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
+          <PaginationControls
+            meta={meta}
+            itemLabel="competições"
+            isLoading={loading}
+            perPageOptions={perPageOptions}
+            onPageChange={setPage}
+            onPerPageChange={setPerPage}
+          />
         </section>
+      </PageWrapper>
+
       <ConfirmModal
         open={Boolean(confirmId)}
-        title="Confirmar remoção"
-        description="Esta ação removerá a competição. Deseja continuar?"
+        title="Confirmar exclusão"
+        description="A competição será removida. Deseja continuar?"
+        confirmLabel="Excluir competição"
         onCancel={() => setConfirmId(null)}
         onConfirm={async () => {
           if (!confirmId) return
           setRemoving(true)
+          setFeedback(null)
           try {
             await CompetitionsGateway.remove(confirmId)
-            setFeedback('Competição removida.')
-            refetch()
-          } catch {
-            setFeedback('Não foi possível remover a competição.')
+            setFeedback({ type: 'success', message: 'Competição removida com sucesso.' })
+            await refetch()
+          } catch (err) {
+            setFeedback({ type: 'error', message: resolveMatchActionError(err, 'Não foi possível remover a competição.') })
           } finally {
             setRemoving(false)
             setConfirmId(null)
           }
         }}
       />
-      </PageWrapper>
     </DashboardShell>
   )
 }

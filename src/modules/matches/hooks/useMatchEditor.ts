@@ -10,6 +10,7 @@ import type { CatalogOption } from '../services/match-catalog.service'
 interface UseMatchEditorState {
   detail: MatchControlDetail | null
   competitions: CatalogOption[]
+  seasons: CatalogOption[]
   teams: CatalogOption[]
   venues: CatalogOption[]
   loading: boolean
@@ -17,9 +18,10 @@ interface UseMatchEditorState {
   error: string | null
   success: string | null
   refetch: () => void
-  loadTeams: (competitionId?: string) => void
+  loadSeasons: (competitionId?: string) => void
+  loadTeams: (competitionSeasonId?: string) => void
   update: (payload: {
-    competitionId?: string
+    competitionSeasonId?: string
     homeTeamId?: string
     awayTeamId?: string
     startAt?: string
@@ -30,6 +32,7 @@ interface UseMatchEditorState {
 export function useMatchEditor(matchId: string): UseMatchEditorState {
   const [detail, setDetail] = useState<MatchControlDetail | null>(null)
   const [competitions, setCompetitions] = useState<CatalogOption[]>([])
+  const [seasons, setSeasons] = useState<CatalogOption[]>([])
   const [teams, setTeams] = useState<CatalogOption[]>([])
   const [venues, setVenues] = useState<CatalogOption[]>([])
   const [loading, setLoading] = useState(true)
@@ -52,14 +55,33 @@ export function useMatchEditor(matchId: string): UseMatchEditorState {
     }
   }, [])
 
-  const loadTeams = useCallback(async (competitionId?: string) => {
+  const loadTeams = useCallback(async (competitionSeasonId?: string) => {
+    if (!competitionSeasonId) {
+      setTeams([])
+      return
+    }
     setError(null)
     try {
-      const teamOptions = await MatchCatalogGateway.listTeams(competitionId)
+      const teamOptions = await MatchCatalogGateway.listTeams(competitionSeasonId)
       setTeams(teamOptions)
     } catch (err) {
       console.error('Failed to load teams', err)
       setError('Não foi possível carregar equipes.')
+    }
+  }, [])
+
+  const loadSeasons = useCallback(async (competitionId?: string) => {
+    if (!competitionId) {
+      setSeasons([])
+      return
+    }
+    setError(null)
+    try {
+      const seasonOptions = await MatchCatalogGateway.listCompetitionSeasons(competitionId)
+      setSeasons(seasonOptions)
+    } catch (err) {
+      console.error('Failed to load seasons', err)
+      setError('Não foi possível carregar temporadas.')
     }
   }, [])
 
@@ -69,14 +91,17 @@ export function useMatchEditor(matchId: string): UseMatchEditorState {
     try {
       const data = await MatchesGateway.getById(matchId)
       setDetail(data)
-      await loadTeams(data.competitionId).catch(() => undefined)
+      await Promise.all([
+        loadSeasons(data.competitionId).catch(() => undefined),
+        loadTeams(data.competitionSeasonId ?? data.competitionId).catch(() => undefined),
+      ])
     } catch (err) {
       console.error('Failed to load match', err)
       setError('Não foi possível carregar dados da partida.')
     } finally {
       setLoading(false)
     }
-  }, [loadTeams, matchId])
+  }, [loadSeasons, loadTeams, matchId])
 
   const update = useCallback(
     async (payload: Parameters<UseMatchEditorState['update']>[0]) => {
@@ -108,6 +133,7 @@ export function useMatchEditor(matchId: string): UseMatchEditorState {
   return {
     detail,
     competitions,
+    seasons,
     teams: sortedTeams,
     venues,
     loading,
@@ -115,7 +141,8 @@ export function useMatchEditor(matchId: string): UseMatchEditorState {
     error,
     success,
     refetch: () => loadDetail().catch(() => undefined),
-    loadTeams: (competitionId?: string) => loadTeams(competitionId).catch(() => undefined),
+    loadSeasons: (competitionId?: string) => loadSeasons(competitionId).catch(() => undefined),
+    loadTeams: (competitionSeasonId?: string) => loadTeams(competitionSeasonId).catch(() => undefined),
     update
   }
 }

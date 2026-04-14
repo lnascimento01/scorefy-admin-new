@@ -33,8 +33,8 @@ function buildQuery(filters: MatchListFilters) {
   if (filters.status && filters.status !== 'all') {
     query.status = filters.status
   }
-  if (filters.competitionId && filters.competitionId !== 'all') {
-    query.competition_id = filters.competitionId
+  if (filters.competitionSeasonId && filters.competitionSeasonId !== 'all') {
+    query.competition_season_id = filters.competitionSeasonId
   }
   if (filters.date) {
     query.from = filters.date
@@ -75,7 +75,7 @@ export const MatchesGateway = {
   async create(payload: MatchCreatePayload): Promise<MatchControlDetail> {
     const api = await getApi()
     const { data } = await api.post(MATCHES_PATH, {
-      competition_id: payload.competitionId,
+      competition_season_id: payload.competitionSeasonId,
       home_team_id: payload.homeTeamId,
       away_team_id: payload.awayTeamId,
       start_at: payload.startAt,
@@ -111,7 +111,7 @@ export const MatchesGateway = {
     if (!id) throw new Error('Match identifier is required.')
     const api = await getApi()
     const { data } = await api.patch(`${MATCHES_PATH}/${id}`, {
-      ...(payload.competitionId ? { competition_id: payload.competitionId } : {}),
+      ...(payload.competitionSeasonId ? { competition_season_id: payload.competitionSeasonId } : {}),
       ...(payload.homeTeamId ? { home_team_id: payload.homeTeamId } : {}),
       ...(payload.awayTeamId ? { away_team_id: payload.awayTeamId } : {}),
       ...(payload.startAt ? { start_at: payload.startAt } : {}),

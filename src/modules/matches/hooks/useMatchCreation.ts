@@ -9,23 +9,28 @@ import type { MatchCreatePayload } from '../types'
 
 interface UseMatchCreationState {
   competitions: CatalogOption[]
+  seasons: CatalogOption[]
   teams: CatalogOption[]
   venues: CatalogOption[]
   loadingCatalog: boolean
+  loadingSeasons: boolean
   loadingTeams: boolean
   submitting: boolean
   error: string | null
   created: MatchControlDetail | null
   reloadCatalog: () => void
-  loadTeams: (competitionId?: string) => void
+  loadSeasons: (competitionId?: string) => void
+  loadTeams: (competitionSeasonId?: string) => void
   create: (payload: MatchCreatePayload) => Promise<MatchControlDetail | null>
 }
 
 export function useMatchCreation(): UseMatchCreationState {
   const [competitions, setCompetitions] = useState<CatalogOption[]>([])
+  const [seasons, setSeasons] = useState<CatalogOption[]>([])
   const [teams, setTeams] = useState<CatalogOption[]>([])
   const [venues, setVenues] = useState<CatalogOption[]>([])
   const [loadingCatalog, setLoadingCatalog] = useState(true)
+  const [loadingSeasons, setLoadingSeasons] = useState(false)
   const [loadingTeams, setLoadingTeams] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,17 +54,40 @@ export function useMatchCreation(): UseMatchCreationState {
     }
   }, [])
 
-  const loadTeams = useCallback(async (competitionId?: string) => {
+  const loadTeams = useCallback(async (competitionSeasonId?: string) => {
+    if (!competitionSeasonId) {
+      setTeams([])
+      setLoadingTeams(false)
+      return
+    }
     setLoadingTeams(true)
     setError(null)
     try {
-      const teamOptions = await MatchCatalogGateway.listTeams(competitionId)
+      const teamOptions = await MatchCatalogGateway.listTeams(competitionSeasonId)
       setTeams(teamOptions)
     } catch (err) {
       console.error('Failed to load teams', err)
       setError('Não foi possível carregar as equipes.')
     } finally {
       setLoadingTeams(false)
+    }
+  }, [])
+
+  const loadSeasons = useCallback(async (competitionId?: string) => {
+    if (!competitionId) {
+      setSeasons([])
+      return
+    }
+    setLoadingSeasons(true)
+    setError(null)
+    try {
+      const seasonOptions = await MatchCatalogGateway.listCompetitionSeasons(competitionId)
+      setSeasons(seasonOptions)
+    } catch (err) {
+      console.error('Failed to load seasons', err)
+      setError('Não foi possível carregar as temporadas.')
+    } finally {
+      setLoadingSeasons(false)
     }
   }, [])
 
@@ -84,20 +112,22 @@ export function useMatchCreation(): UseMatchCreationState {
 
   useEffect(() => {
     loadCatalog().catch(() => undefined)
-    loadTeams().catch(() => undefined)
   }, [loadCatalog, loadTeams])
 
   return {
     competitions,
+    seasons,
     teams,
     venues,
     loadingCatalog,
+    loadingSeasons,
     loadingTeams,
     submitting,
     error,
     created,
     reloadCatalog: () => loadCatalog().catch(() => undefined),
-    loadTeams: (competitionId?: string) => loadTeams(competitionId).catch(() => undefined),
+    loadSeasons: (competitionId?: string) => loadSeasons(competitionId).catch(() => undefined),
+    loadTeams: (competitionSeasonId?: string) => loadTeams(competitionSeasonId).catch(() => undefined),
     create
   }
 }

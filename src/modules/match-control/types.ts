@@ -44,6 +44,7 @@ export interface MatchControlDetail {
   startAt?: string
   competitionName?: string
   competitionId?: string
+  competitionSeasonId?: string
   competitionSeason?: string
   venueName?: string
   venueId?: string
