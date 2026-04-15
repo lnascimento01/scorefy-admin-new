@@ -111,7 +111,7 @@ export default function LoginPage() {
           <span>Ainda sem acesso? Solicite ao administrador.</span>
           <Link
             href="/recuperar-senha"
-            className="font-medium text-secondary transition hover:text-secondary/80"
+            className="text-link font-medium transition"
           >
             Esqueci minha senha
           </Link>

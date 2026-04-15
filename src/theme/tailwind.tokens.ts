@@ -2,23 +2,25 @@ export type ThemeName = 'light' | 'dark'
 
 export const theme = {
   light: {
-    bg: '#F6F6F7',
+    bg: '#EEF2F8',
     card: '#FFFFFF',
-    border: '#E5E5E7',
-    text: '#0A0A0A',
-    textSecondary: '#6E6E73',
-    accent: '#007AFF',
-    accentHover: '#0A84FF'
+    elevated: '#F7F9FC',
+    border: 'rgba(15, 23, 42, 0.10)',
+    text: '#0F172A',
+    textSecondary: 'rgba(15, 23, 42, 0.74)',
+    accent: '#2563EB',
+    accentHover: '#1D4ED8'
   },
   dark: {
-    bg: '#0D0D0D',
-    card: '#1C1C1E',
-    elevated: '#2C2C2E',
-    border: '#3A3A3C',
-    text: '#FFFFFF',
-    textSecondary: '#B3B3B3',
-    accent: '#0A84FF',
-    accentHover: '#409CFF'
+    bg: '#0B111A',
+    card: '#0F1724',
+    elevated: '#121D2E',
+    raised: '#16243A',
+    border: 'rgba(160, 190, 255, 0.10)',
+    text: '#EAF1FF',
+    textSecondary: 'rgba(234, 241, 255, 0.72)',
+    accent: '#4F8CFF',
+    accentHover: '#3B78F2'
   }
 } satisfies Record<ThemeName, Record<string, string>>
 
@@ -44,10 +46,10 @@ export const palette = {
     surfaceContrast: theme.dark.card,
     surfaceElevated: theme.dark.elevated,
     border: theme.dark.border,
-    borderStrong: '#515156',
+    borderStrong: 'rgba(160, 190, 255, 0.18)',
     text: theme.dark.text,
     textMuted: theme.dark.textSecondary,
-    subtitle: theme.dark.textSecondary
+    subtitle: 'rgba(234, 241, 255, 0.52)'
   }
 } satisfies Record<ThemeName, Record<string, string>>
 
@@ -67,8 +69,8 @@ export const spacing = {
 }
 
 export const shadows = {
-  card: '0 2px 12px rgba(0, 0, 0, 0.08)',
-  popover: '0 12px 36px rgba(0, 0, 0, 0.12)'
+  card: '0 1px 0 rgba(255,255,255,0.04), 0 10px 24px rgba(0,0,0,0.35)',
+  popover: '0 1px 0 rgba(255,255,255,0.06), 0 18px 40px rgba(0,0,0,0.55)'
 }
 
 export const typography = {
@@ -83,8 +85,8 @@ export const semanticTokens = {
     surfaceElevated: theme.light.card
   },
   dark: {
-    surfaceMuted: theme.dark.card,
-    surfaceRaised: theme.dark.card,
+    surfaceMuted: theme.dark.elevated,
+    surfaceRaised: theme.dark.raised,
     surfaceElevated: theme.dark.elevated
   }
 }

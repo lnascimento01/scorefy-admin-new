@@ -26,8 +26,8 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-borderSoft bg-[var(--surface-elevated)] p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-3xl border border-borderSofter bg-surface-contrast p-6 shadow-popover">
         <div className="space-y-2">
           <h3 className="text-lg font-semibold text-textPrimary">{title}</h3>
           {description && <p className="text-sm text-textSecondary">{description}</p>}

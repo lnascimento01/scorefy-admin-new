@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Radio,
   Trophy,
+  UserRound,
   Users,
   Users2,
 } from 'lucide-react'
@@ -37,6 +38,7 @@ export function DashboardShell({ userName, userEmail, onRefresh, refreshing, chi
       { key: 'matches', href: '/matches', label: dictionary.navigation.matches, Icon: Radio },
       { key: 'competitions', href: '/competitions', label: dictionary.navigation.competitions, Icon: Trophy },
       { key: 'teams', href: '/teams', label: dictionary.navigation.teams, Icon: Users2 },
+      { key: 'players', href: '/players', label: dictionary.navigation.players, Icon: UserRound },
       { key: 'stats', href: '/stats', label: dictionary.navigation.stats, Icon: BarChart3 },
       { key: 'reports', href: '/reports', label: dictionary.navigation.reports, Icon: FileText },
       { key: 'users', href: '/users', label: dictionary.navigation.users, Icon: Users }
@@ -45,15 +47,15 @@ export function DashboardShell({ userName, userEmail, onRefresh, refreshing, chi
   )
 
   return (
-    <div className="flex min-h-screen bg-surface text-textPrimary">
+    <div className="flex min-h-screen bg-[var(--bg-0)] text-textPrimary">
       <div className="hidden min-h-screen w-72 shrink-0 lg:block lg:sticky lg:top-0 lg:h-screen">
         <Sidebar
           items={navItems}
           activePath={pathname}
           footer={
             <>
-              <p className="text-base font-semibold text-textPrimary dark:text-dark-text">Painel Scorefy</p>
-              <p className="leading-relaxed text-textSecondary dark:text-dark-textSecondary">
+              <p className="text-base font-semibold text-textPrimary">Painel Scorefy</p>
+              <p className="leading-relaxed text-textSecondary">
                 Controle partidas, súmulas e usuários com segurança.
               </p>
             </>
@@ -67,7 +69,7 @@ export function DashboardShell({ userName, userEmail, onRefresh, refreshing, chi
           onClick={() => setMenuOpen(false)}
           role="presentation"
         >
-          <div className="h-full w-72 bg-surface p-4 dark:bg-dark-surface" onClick={(event) => event.stopPropagation()}>
+          <div className="h-full w-72 bg-[var(--bg-1)] p-4" onClick={(event) => event.stopPropagation()}>
             <Sidebar items={navItems} activePath={pathname} onClose={() => setMenuOpen(false)} />
           </div>
         </div>

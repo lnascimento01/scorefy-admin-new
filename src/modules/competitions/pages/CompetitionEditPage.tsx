@@ -446,7 +446,7 @@ export function CompetitionEditPage({ currentUser, competitionId }: { currentUse
             <Button variant="outline" size="sm" onClick={() => router.push('/competitions')}>
               Voltar
             </Button>
-            <Button variant="ghost" size="sm" className="text-secondary" onClick={() => setConfirmCompetitionOpen(true)} disabled={removingCompetition}>
+            <Button variant="ghost" size="sm" className="text-danger" onClick={() => setConfirmCompetitionOpen(true)} disabled={removingCompetition}>
               <Trash2 className="h-4 w-4" />
               Excluir competição
             </Button>
@@ -661,7 +661,7 @@ export function CompetitionEditPage({ currentUser, competitionId }: { currentUse
                     <textarea
                       value={competitionForm.meta}
                       onChange={(event) => setCompetitionForm((prev) => ({ ...prev, meta: event.target.value }))}
-                      className="mt-3 min-h-28 w-full rounded-md border border-borderSoft bg-surface-elevated px-3 py-3 text-sm text-textPrimary shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text"
+                      className="field-area mt-3 min-h-28"
                     />
                   </details>
                   <Button type="submit" disabled={savingCompetition} className="gap-2">
@@ -740,7 +740,7 @@ export function CompetitionEditPage({ currentUser, competitionId }: { currentUse
                       </p>
                     </div>
                     {selectedSeason && (
-                      <Button type="button" variant="ghost" size="sm" className="text-secondary" onClick={() => setConfirmSeasonOpen(true)} disabled={removingSeason}>
+                      <Button type="button" variant="ghost" size="sm" className="text-danger" onClick={() => setConfirmSeasonOpen(true)} disabled={removingSeason}>
                         <Trash2 className="h-4 w-4" />
                         Excluir temporada
                       </Button>
@@ -824,7 +824,7 @@ export function CompetitionEditPage({ currentUser, competitionId }: { currentUse
                       <textarea
                         value={seasonForm.meta}
                         onChange={(event) => setSeasonForm((prev) => ({ ...prev, meta: event.target.value }))}
-                        className="min-h-28 w-full rounded-md border border-borderSoft bg-surface-elevated px-3 py-3 text-sm text-textPrimary shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text"
+                        className="field-area min-h-28"
                       />
                     </label>
                   </div>
@@ -882,7 +882,7 @@ export function CompetitionEditPage({ currentUser, competitionId }: { currentUse
                   value={configText}
                   onChange={(event) => setConfigText(event.target.value)}
                   disabled={!selectedSeason}
-                  className="min-h-48 w-full rounded-md border border-borderSoft bg-surface-elevated px-3 py-3 text-sm text-textPrimary shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text"
+                  className="field-area min-h-48"
                 />
               </label>
 
@@ -1012,7 +1012,7 @@ export function CompetitionEditPage({ currentUser, competitionId }: { currentUse
                     checked={rulesForm.allowDraws}
                     onChange={(event) => setRulesForm((prev) => ({ ...prev, allowDraws: event.target.checked }))}
                     disabled={!selectedSeason}
-                    className="h-4 w-4 accent-red-primary dark:accent-dark-red-primary"
+                    className="h-4 w-4 accent-primary"
                   />
                   Permitir empates
                 </label>

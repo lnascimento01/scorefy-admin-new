@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Scorefy Admin
 
-## Getting Started
+Painel administrativo Next.js do Scorefy.
 
-First, run the development server:
+## Desenvolvimento
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+O app usa `NEXT_PUBLIC_API_BASE` para falar com a API. Na ausência de configuração explícita, os módulos usam os endpoints versionados em `/api/v1/auth/...`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Módulo de Atletas
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+O módulo administrativo de atletas foi implementado sobre a entidade técnica `Player`, preservando a nomenclatura real do backend.
 
-## Learn More
+### Rotas do admin
 
-To learn more about Next.js, take a look at the following resources:
+- `/players`
+- `/players/create`
+- `/players/[playerId]`
+- `/players/[playerId]/edit`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Funcionalidades
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- listagem paginada com busca por nome/apelido
+- filtro por equipe base
+- filtro por status ativo/inativo
+- criação de atleta
+- edição de cadastro-base
+- tela de detalhe
+- exclusão condicionada à ausência de histórico vinculado
+- transferência entre equipes por modal dedicado
 
-## Deploy on Vercel
+### Regras de segurança da transferência
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- a troca de equipe base não usa o update genérico de `Player`
+- a operação passa por `POST /api/v1/auth/players/{player}/transfer`
+- se o atleta possuir inscrições sazonais ativas, a API responde `422`
+- o admin exibe a mensagem retornada pela API sem mascarar o conflito
+- nenhuma inscrição sazonal é migrada automaticamente
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Campos usados no formulário
+
+- `team_id`
+- `position_id`
+- `first_name`
+- `last_name`
+- `nickname`
+- `birthdate`
+- `number`
+- `nationality`
+- `is_active`
+
+## Endpoints consumidos
+
+- `GET /api/v1/auth/players`
+- `GET /api/v1/auth/players/{player}`
+- `POST /api/v1/auth/players`
+- `PATCH /api/v1/auth/players/{player}`
+- `DELETE /api/v1/auth/players/{player}`
+- `POST /api/v1/auth/players/{player}/transfer`
+- `GET /api/v1/auth/teams`
+- `GET /api/v1/auth/player-positions`
+
+## Teste local do módulo
+
+1. Acesse `/players`.
+2. Crie um atleta em `/players/create`.
+3. Abra o detalhe do atleta recém-criado.
+4. Edite dados cadastrais em `/players/[playerId]/edit`.
+5. Execute a transferência pelo modal de detalhe ou listagem.
+6. Tente transferir um atleta com inscrição sazonal ativa para validar o erro `422`.
+7. Tente excluir um atleta com histórico para validar o bloqueio seguro.
+
+## Validação recomendada
+
+```bash
+npm run lint
+npm run build
+```
+
+Para validar o backend junto com o admin, rode também a suíte Laravel no repositório `/var/www/handscores-api` assim que o ambiente de testes tiver driver de banco habilitado.

@@ -13,25 +13,30 @@ interface SidebarProps {
 
 export function Sidebar({ items, activePath, footer, onClose }: SidebarProps) {
   return (
-    <aside className="flex h-full w-72 flex-col gap-8 bg-surface px-6 py-6 text-textPrimary dark:bg-dark-surface">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <p className="text-[11px] font-semibold tracking-[0.26em] text-textSecondary dark:text-dark-textSecondary">SCOREFY</p>
-          <p className="text-2xl font-semibold text-textPrimary dark:text-dark-text">Admin</p>
+    <aside className="sidebar-panel flex h-full w-72 flex-col gap-6 px-4 py-6 text-textPrimary">
+      <div className="border-b border-borderSofter px-2.5 pb-5 pt-1">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-2">
+            <p className="text-[10px] font-semibold tracking-[0.22em] text-textMuted">SCOREFY</p>
+            <div className="space-y-1.5">
+              <p className="text-[1.38rem] font-semibold leading-none tracking-[-0.025em] text-textPrimary">Admin</p>
+              <p className="text-[0.8rem] leading-none text-textSecondary">Painel operacional</p>
+            </div>
+          </div>
+          {onClose && (
+            <button
+              type="button"
+              className="rounded-full p-2 text-textSecondary transition hover:bg-surface-elevated hover:text-textPrimary focus-visible:outline-none focus-visible:shadow-focus lg:hidden"
+              onClick={onClose}
+              aria-label="Fechar menu lateral"
+            >
+              ×
+            </button>
+          )}
         </div>
-        {onClose && (
-          <button
-            type="button"
-            className="rounded-full p-2 text-textSecondary transition hover:bg-card hover:text-textPrimary dark:text-dark-textSecondary dark:hover:bg-dark-surface2 lg:hidden"
-            onClick={onClose}
-            aria-label="Fechar menu lateral"
-          >
-            ×
-          </button>
-        )}
       </div>
 
-      <nav className="flex flex-col gap-2" aria-label="Navegação principal">
+      <nav className="flex flex-1 flex-col gap-1.5 px-1" aria-label="Navegação principal">
         {items.map((item) => (
           <SidebarItem
             key={item.href}
@@ -44,7 +49,13 @@ export function Sidebar({ items, activePath, footer, onClose }: SidebarProps) {
         ))}
       </nav>
 
-      {footer && <div className="mt-auto space-y-2 rounded-apple border border-borderSoft bg-card p-4 text-sm text-textSecondary shadow-card dark:border-dark-border dark:bg-dark-surface2 dark:text-dark-textSecondary">{footer}</div>}
+      {footer && (
+        <div className="mt-auto border-t border-borderSofter px-1 pt-4">
+          <div className="rounded-lg bg-[color:color-mix(in_srgb,var(--surface-elevated)_74%,transparent)] px-3.5 py-3 text-sm text-textMuted [&_p:first-child]:text-[0.72rem] [&_p:first-child]:font-semibold [&_p:first-child]:uppercase [&_p:first-child]:tracking-[0.18em] [&_p:first-child]:text-textSecondary [&_p:last-child]:mt-1 [&_p:last-child]:text-xs [&_p:last-child]:leading-relaxed [&_p:last-child]:text-textMuted">
+            {footer}
+          </div>
+        </div>
+      )}
     </aside>
   )
 }

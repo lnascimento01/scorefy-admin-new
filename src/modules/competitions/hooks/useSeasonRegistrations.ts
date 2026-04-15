@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { resolveMatchActionError } from '@/modules/matches/utils/errors'
 import type {
   CompetitionSeasonRegistrationPlayerSummary,
@@ -59,6 +59,9 @@ export function useSeasonRegistrations(seasonId: string | null): UseSeasonRegist
   const [searchingPlayers, setSearchingPlayers] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const playerSearchRequestIdRef = useRef(0)
+  const playerSearchInFlightKeyRef = useRef<string | null>(null)
+  const playerSearchResolvedKeyRef = useRef<string | null>(null)
 
   const fetchRegistrations = useCallback(async () => {
     if (!seasonId) {
@@ -115,6 +118,8 @@ export function useSeasonRegistrations(seasonId: string | null): UseSeasonRegist
 
   useEffect(() => {
     setPlayerOptions([])
+    playerSearchInFlightKeyRef.current = null
+    playerSearchResolvedKeyRef.current = null
   }, [selectedRegistrationId])
 
   const syncAfterMutation = useCallback(async (registrationId?: string | null) => {
@@ -370,15 +375,40 @@ export function useSeasonRegistrations(seasonId: string | null): UseSeasonRegist
   }, [])
 
   const searchPlayers = useCallback(async (teamId: string, query: string) => {
+    const normalizedTeamId = teamId.trim()
+    const normalizedQuery = query.trim()
+
+    if (!normalizedTeamId) {
+      setPlayerOptions([])
+      playerSearchInFlightKeyRef.current = null
+      playerSearchResolvedKeyRef.current = null
+      return
+    }
+
+    const searchKey = `${normalizedTeamId}::${normalizedQuery}`
+
+    if (playerSearchInFlightKeyRef.current === searchKey || playerSearchResolvedKeyRef.current === searchKey) {
+      return
+    }
+
+    const requestId = ++playerSearchRequestIdRef.current
+    playerSearchInFlightKeyRef.current = searchKey
     setSearchingPlayers(true)
     try {
-      const items = await SeasonRegistrationsGateway.searchPlayers(teamId, query)
+      const items = await SeasonRegistrationsGateway.searchPlayers(normalizedTeamId, normalizedQuery)
+      if (requestId !== playerSearchRequestIdRef.current) return
       setPlayerOptions(items)
+      playerSearchResolvedKeyRef.current = searchKey
     } catch (err) {
+      if (requestId !== playerSearchRequestIdRef.current) return
       setError(resolveMatchActionError(err, 'Não foi possível buscar atletas do time.'))
       setPlayerOptions([])
+      playerSearchResolvedKeyRef.current = null
     } finally {
-      setSearchingPlayers(false)
+      if (requestId === playerSearchRequestIdRef.current) {
+        playerSearchInFlightKeyRef.current = null
+        setSearchingPlayers(false)
+      }
     }
   }, [])
 

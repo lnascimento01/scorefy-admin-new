@@ -118,7 +118,7 @@ export function CompetitionCreatePage({ currentUser }: { currentUser: AuthProfil
         <div className="grid gap-6 lg:grid-cols-3">
           <form className="card space-y-5 p-6 lg:col-span-2" onSubmit={handleSubmit}>
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary/15 text-secondary">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--brand-soft)] text-primary">
                 <Shield className="h-5 w-5" />
               </div>
               <div>
@@ -250,7 +250,7 @@ export function CompetitionCreatePage({ currentUser }: { currentUser: AuthProfil
                   value={form.meta}
                   onChange={(event) => setForm((prev) => ({ ...prev, meta: event.target.value }))}
                   placeholder='{"edition": 1}'
-                  className="min-h-32 w-full rounded-md border border-borderSoft bg-surface-elevated px-3 py-3 text-sm text-textPrimary shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text"
+                  className="field-area min-h-32"
                 />
               </label>
             </div>

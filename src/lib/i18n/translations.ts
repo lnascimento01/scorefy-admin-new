@@ -17,6 +17,7 @@ export const translations = {
       matches: 'Partidas',
       competitions: 'Competições',
       teams: 'Equipes',
+      players: 'Atletas',
       stats: 'Estatísticas',
       reports: 'Súmulas',
       users: 'Usuários'
@@ -250,6 +251,7 @@ export const translations = {
       matches: 'Matches',
       competitions: 'Competitions',
       teams: 'Teams',
+      players: 'Athletes',
       stats: 'Stats',
       reports: 'Reports',
       users: 'Users'
@@ -483,6 +485,7 @@ export const translations = {
       matches: 'Partidos',
       competitions: 'Competiciones',
       teams: 'Equipos',
+      players: 'Atletas',
       stats: 'Estadísticas',
       reports: 'Actas',
       users: 'Usuarios'

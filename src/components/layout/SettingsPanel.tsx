@@ -27,19 +27,19 @@ export function SettingsPanel({ open, onClose, setDensity }: SettingsPanelProps)
     >
       <div
         className={cn(
-          'absolute right-0 top-0 h-full w-full max-w-md translate-x-full bg-surface-contrast shadow-card transition-transform dark:bg-dark-surface',
+          'absolute right-0 top-0 h-full w-full max-w-md translate-x-full border-l border-borderSofter bg-surface-contrast shadow-popover transition-transform',
           open ? 'translate-x-0' : '',
         )}
       >
-        <header className="flex items-center justify-between border-b border-borderSoft px-5 py-4 dark:border-dark-border">
+        <header className="flex items-center justify-between border-b border-borderSofter px-5 py-4">
           <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-textSecondary dark:text-dark-subtitle">Painel</p>
-            <h3 className="text-lg font-semibold text-textPrimary dark:text-dark-text">Configurações</h3>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-textMuted">Painel</p>
+            <h3 className="text-lg font-semibold text-textPrimary">Configurações</h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-2 text-textSecondary transition hover:bg-surface-muted dark:text-dark-subtitle dark:hover:bg-dark-surface2"
+            className="rounded-xl p-2 text-textSecondary transition hover:bg-surface-elevated"
             aria-label="Fechar painel de configurações"
           >
             <X className="h-4 w-4" />
@@ -49,13 +49,13 @@ export function SettingsPanel({ open, onClose, setDensity }: SettingsPanelProps)
         <div className="space-y-6 overflow-y-auto p-5 text-sm">
           <section className="space-y-3">
             <div className="flex items-center gap-2">
-              <SlidersHorizontal className="h-4 w-4 text-red-primary dark:text-dark-red-primary" />
-              <p className="text-sm font-semibold text-textPrimary dark:text-dark-text">Aparência</p>
+              <SlidersHorizontal className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold text-textPrimary">Aparência</p>
             </div>
-            <div className="flex items-center gap-3 rounded-md border border-borderSoft bg-surface-muted/50 p-3 dark:border-dark-border dark:bg-dark-surface2">
+            <div className="flex items-center gap-3 rounded-xl border border-borderSofter bg-surface-elevated p-3">
               <div className="flex-1">
-                <p className="font-semibold text-textPrimary dark:text-dark-text">Tema</p>
-                <p className="text-xs text-textSecondary dark:text-dark-subtitle">Altere entre claro e escuro.</p>
+                <p className="font-semibold text-textPrimary">Tema</p>
+                <p className="text-xs text-textSecondary">Altere entre claro e escuro.</p>
               </div>
               <ThemeToggle />
             </div>
@@ -64,10 +64,10 @@ export function SettingsPanel({ open, onClose, setDensity }: SettingsPanelProps)
                 type="button"
                 onClick={() => setMode('light')}
                 className={cn(
-                  'rounded-md border p-3 text-left transition',
+                  'rounded-xl border p-3 text-left transition',
                   mode === 'light'
-                    ? 'border-red-primary bg-red-primary/10 text-red-primary'
-                    : 'border-borderSoft hover:border-borderStrong dark:border-dark-border dark:hover:border-borderSoft',
+                    ? 'border-[color:var(--brand-soft-border)] bg-[var(--brand-soft)] text-primary'
+                    : 'border-borderSofter text-textSecondary hover:bg-surface-elevated hover:text-textPrimary',
                 )}
               >
                 <p className="font-semibold">Light</p>
@@ -77,22 +77,22 @@ export function SettingsPanel({ open, onClose, setDensity }: SettingsPanelProps)
                 type="button"
                 onClick={() => setMode('dark')}
                 className={cn(
-                  'rounded-md border p-3 text-left transition',
+                  'rounded-xl border p-3 text-left transition',
                   mode === 'dark'
-                    ? 'border-red-primary bg-red-primary/10 text-red-primary dark:bg-dark-surface2'
-                    : 'border-borderSoft hover:border-borderStrong dark:border-dark-border dark:hover:border-borderSoft',
+                    ? 'border-[color:var(--brand-soft-border)] bg-[var(--brand-soft)] text-primary'
+                    : 'border-borderSofter text-textSecondary hover:bg-surface-elevated hover:text-textPrimary',
                 )}
               >
                 <p className="font-semibold">Dark</p>
-                <p className="text-xs text-textSecondary">Vermelho suavizado</p>
+                <p className="text-xs text-textSecondary">Admin Dark Clean</p>
               </button>
             </div>
           </section>
 
           <section className="space-y-3">
             <div className="flex items-center gap-2">
-              <LayoutTemplate className="h-4 w-4 text-red-primary dark:text-dark-red-primary" />
-              <p className="text-sm font-semibold text-textPrimary dark:text-dark-text">Layout</p>
+              <LayoutTemplate className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold text-textPrimary">Layout</p>
             </div>
             <Tabs
               options={[
@@ -102,34 +102,34 @@ export function SettingsPanel({ open, onClose, setDensity }: SettingsPanelProps)
               value="comfortable"
               onChange={(value) => setDensity?.(value as 'comfortable' | 'compact')}
             />
-            <p className="text-xs text-textSecondary dark:text-dark-subtitle">Controle de densidade para tabelas e listas.</p>
+            <p className="text-xs text-textSecondary">Controle de densidade para tabelas e listas.</p>
           </section>
 
           <section className="space-y-3">
             <div className="flex items-center gap-2">
-              <Bell className="h-4 w-4 text-red-primary dark:text-dark-red-primary" />
-              <p className="text-sm font-semibold text-textPrimary dark:text-dark-text">Alertas</p>
+              <Bell className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold text-textPrimary">Alertas</p>
             </div>
-            <div className="space-y-2 rounded-md border border-borderSoft bg-surface-muted/50 p-3 dark:border-dark-border dark:bg-dark-surface2">
+            <div className="space-y-2 rounded-xl border border-borderSofter bg-surface-elevated p-3">
               <label className="flex items-center justify-between gap-3 text-sm">
                 <span>Sincronização de partidas</span>
-                <input type="checkbox" defaultChecked className="h-4 w-4 accent-red-primary dark:accent-dark-red-primary" />
+                <input type="checkbox" defaultChecked className="h-4 w-4 accent-primary" />
               </label>
               <label className="flex items-center justify-between gap-3 text-sm">
                 <span>Súmulas pendentes</span>
-                <input type="checkbox" defaultChecked className="h-4 w-4 accent-red-primary dark:accent-dark-red-primary" />
+                <input type="checkbox" defaultChecked className="h-4 w-4 accent-primary" />
               </label>
               <label className="flex items-center justify-between gap-3 text-sm">
                 <span>Atualizações do sistema</span>
-                <input type="checkbox" className="h-4 w-4 accent-red-primary dark:accent-dark-red-primary" />
+                <input type="checkbox" className="h-4 w-4 accent-primary" />
               </label>
             </div>
           </section>
 
           <section className="space-y-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-red-primary dark:text-dark-red-primary" />
-              <p className="text-sm font-semibold text-textPrimary dark:text-dark-text">Preferências rápidas</p>
+              <Sparkles className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold text-textPrimary">Preferências rápidas</p>
             </div>
             <div className="grid gap-2">
               <Button variant="outline" className="justify-start text-left">Recarregar dados do dashboard</Button>

@@ -12,26 +12,78 @@ interface SidebarItemProps {
   onClick?: () => void
 }
 
-export function SidebarItem({ label, icon: Icon, href, active = false, onClick }: SidebarItemProps) {
+export function SidebarItem({
+  label,
+  icon: Icon,
+  href,
+  active = false,
+  onClick,
+}: SidebarItemProps) {
   return (
     <Link
       href={href}
       onClick={onClick}
+      aria-current={active ? 'page' : undefined}
       className={cn(
-        'group flex items-center gap-3 rounded-apple border px-3 py-2.5 text-sm font-medium transition',
+        'app-nav-link group relative flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-2 text-[0.94rem] transition',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand)]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--bg-1)]',
         active
-          ? 'border-borderSoft bg-card text-accent shadow-card dark:border-dark-border dark:bg-dark-surface2 dark:text-accent'
-          : 'border-transparent text-[#0A0A0A] hover:border-borderSoft hover:bg-card hover:text-accent dark:text-white dark:hover:border-dark-border dark:hover:bg-dark-surface2 dark:hover:text-accent',
+          ? [
+              'bg-[color:var(--brand-soft)]',
+              'text-[color:var(--text-1)]',
+              'border border-[color:var(--brand-soft-border)]',
+              'shadow-[0_1px_0_rgba(255,255,255,0.04)]',
+            ].join(' ')
+          : [
+              'text-[color:var(--text-3)]',
+              'hover:bg-[color:var(--surface-2)]',
+              'hover:text-[color:var(--text-2)]',
+            ].join(' ')
       )}
     >
-      <Icon
-        size={18}
+      {/* Icon tile */}
+      <span
         className={cn(
-          'transition',
-          active ? 'text-accent' : 'text-[#0A0A0A] group-hover:text-accent dark:text-white dark:group-hover:text-accent',
+          'grid h-9 w-9 place-items-center rounded-md border transition',
+          active
+            ? 'bg-[color:rgba(79,140,255,0.14)] border-[color:rgba(79,140,255,0.22)]'
+            : 'bg-[color:rgba(255,255,255,0.04)] border-[color:rgba(160,190,255,0.08)] group-hover:bg-[color:rgba(255,255,255,0.06)]'
         )}
-      />
-      <span className="leading-none">{label}</span>
+      >
+        <Icon
+          size={18}
+          className={cn(
+            'transition-colors',
+            active ? 'text-[color:var(--brand)]' : 'text-[color:var(--text-3)] group-hover:text-[color:var(--text-2)]'
+          )}
+        />
+      </span>
+
+      <span
+        className={cn(
+          'truncate leading-none',
+          active
+            ? 'font-semibold text-[color:var(--text-1)]'
+            : 'font-medium text-[color:var(--text-3)] group-hover:text-[color:var(--text-2)]',
+        )}
+      >
+        {label}
+      </span>
+
+      {/* Optional: subtle chevron-on-hover (gives “menu feel”) */}
+      <span
+        className={cn(
+          'ml-auto text-[color:var(--text-4)] opacity-0 transition',
+          'group-hover:opacity-100'
+        )}
+      >
+        ›
+      </span>
+
+      {/* Optional: active glow (very subtle) */}
+      {active && (
+        <span className="pointer-events-none absolute inset-0 rounded-lg shadow-[0_0_0_1px_rgba(79,140,255,0.10),0_10px_24px_rgba(0,0,0,0.25)]" />
+      )}
     </Link>
   )
 }

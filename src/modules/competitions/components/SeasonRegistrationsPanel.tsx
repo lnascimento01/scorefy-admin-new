@@ -381,7 +381,7 @@ export function SeasonRegistrationsPanel({
         />
       )}
 
-      <div className="card space-y-4 p-4">
+      <div className="rounded-2xl border border-borderSofter bg-surface-elevated p-4">
         <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <p className="text-sm font-semibold text-textPrimary">Inscrever novo time</p>
@@ -395,7 +395,7 @@ export function SeasonRegistrationsPanel({
           )}
         </div>
 
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_minmax(290px,0.9fr)]">
+        <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(300px,0.85fr)]">
           <div className="space-y-3">
             <div className="flex gap-2">
               <Input
@@ -443,7 +443,7 @@ export function SeasonRegistrationsPanel({
               <span>{selectedTeamId ? '1 selecionado' : 'nenhum selecionado'}</span>
             </div>
 
-            <div className="max-h-44 space-y-1 overflow-y-auto rounded-xl border border-borderSoft bg-surface-muted p-2">
+            <div className="max-h-40 space-y-1 overflow-y-auto rounded-xl bg-surface-contrast p-2">
               {filteredCandidateTeams.length === 0 ? (
                 <div className="px-2 py-4 text-sm text-textSecondary">Nenhum time disponível para os filtros atuais.</div>
               ) : (
@@ -458,8 +458,8 @@ export function SeasonRegistrationsPanel({
                       className={cn(
                         'w-full rounded-lg border px-3 py-2 text-left transition',
                         active
-                          ? 'border-red-primary bg-red-primary/10'
-                          : 'border-transparent bg-surface-contrast hover:border-red-primary/25',
+                          ? 'border-[color:var(--brand-soft-border)] bg-[var(--brand-soft)]'
+                          : 'border-transparent bg-surface-contrast hover:border-[color:var(--brand-soft-border)] hover:bg-surface-elevated',
                       )}
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -485,7 +485,7 @@ export function SeasonRegistrationsPanel({
         </div>
       </div>
 
-      <div className="card space-y-3 p-4">
+      <div className="card space-y-4 p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-sm font-semibold text-textPrimary">Times inscritos</p>
@@ -502,106 +502,104 @@ export function SeasonRegistrationsPanel({
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-borderSoft">
-          <Table className="min-w-[1160px] text-sm">
-            <TableHeader>
+        <Table className="min-w-[1240px] text-sm">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[24%]">Time</TableHead>
+              <TableHead className="w-[8%]">Sigla</TableHead>
+              <TableHead className="w-[12%]">Workflow</TableHead>
+              <TableHead className="w-[12%]">Elegibilidade</TableHead>
+              <TableHead className="w-[7%] text-center">Ativos</TableHead>
+              <TableHead className="w-[8%] text-center">Pendentes</TableHead>
+              <TableHead className="w-[10%] text-center">Bloqueados</TableHead>
+              <TableHead className="w-[12%]">Alertas</TableHead>
+              <TableHead className="w-[17%] text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
               <TableRow>
-                <TableHead>Time</TableHead>
-                <TableHead>Sigla</TableHead>
-                <TableHead>Workflow</TableHead>
-                <TableHead>Elegibilidade</TableHead>
-                <TableHead>Ativos</TableHead>
-                <TableHead>Pendentes</TableHead>
-                <TableHead>Bloqueados</TableHead>
-                <TableHead>Alertas</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableCell colSpan={9} className="py-6 text-textSecondary">
+                  <div className="flex items-center gap-3">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Carregando inscrições...
+                  </div>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="py-6 text-textSecondary">
-                    <div className="flex items-center gap-3">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Carregando inscrições...
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : filteredRegistrations.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="py-6 text-textSecondary">
-                    {teamRegistrations.length === 0 ? 'Nenhum time inscrito nesta temporada.' : 'Nenhum time corresponde ao filtro atual.'}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredRegistrations.map((registration) => {
-                  const active = workspace.open && workspace.registrationId === registration.id
+            ) : filteredRegistrations.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="py-6 text-textSecondary">
+                  {teamRegistrations.length === 0 ? 'Nenhum time inscrito nesta temporada.' : 'Nenhum time corresponde ao filtro atual.'}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredRegistrations.map((registration) => {
+                const active = workspace.open && workspace.registrationId === registration.id
 
-                  return (
-                    <TableRow key={registration.id} className={active ? 'bg-red-primary/10' : ''}>
-                      <TableCell>
-                        <button type="button" className="min-w-0 text-left" onClick={() => openWorkspace(registration.id, 'summary')}>
-                          <p className={cn('truncate font-medium', active ? 'text-red-primary dark:text-dark-red-primary' : 'text-textPrimary')}>
-                            {registration.team?.name ?? `Time #${registration.teamId}`}
-                          </p>
-                          <p className="truncate text-xs text-textSecondary">{registration.team?.city ?? 'Sem cidade informada'}</p>
-                        </button>
-                      </TableCell>
-                      <TableCell className="text-sm text-textSecondary">{registration.team?.shortName ?? '—'}</TableCell>
-                      <TableCell>
-                        <Badge variant={statusVariant(registration.registrationStatus)}>{labelForStatus(registration.registrationStatus)}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={statusVariant(registration.eligibilityStatus)}>{labelForStatus(registration.eligibilityStatus)}</Badge>
-                      </TableCell>
-                      <TableCell>{registration.activePlayersCount}</TableCell>
-                      <TableCell>{registration.pendingPlayersCount}</TableCell>
-                      <TableCell>{registration.ineligiblePlayersCount}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {registration.pendingAlerts.length === 0 ? (
-                            <span className="text-xs text-textSecondary">Sem alertas</span>
-                          ) : (
-                            registration.pendingAlerts.slice(0, 2).map((alert) => (
-                              <Badge key={alert} variant="warning">{alertLabel(alert)}</Badge>
-                            ))
-                          )}
-                          {registration.pendingAlerts.length > 2 && (
-                            <Badge variant="default">+{registration.pendingAlerts.length - 2}</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button type="button" size="sm" variant="ghost" onClick={() => openWorkspace(registration.id, 'summary')}>
-                            Abrir
-                          </Button>
-                          <Button type="button" size="sm" variant="ghost" onClick={() => openWorkspace(registration.id, 'athletes')}>
-                            Atletas
-                          </Button>
-                          <Button type="button" size="sm" variant="ghost" onClick={() => openWorkspace(registration.id, 'administrative')}>
-                            Administrativo
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="gap-1 text-secondary"
-                            disabled={saving}
-                            onClick={() => deleteTeamRegistration(registration.id).catch(() => undefined)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Retirar
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                return (
+                  <TableRow key={registration.id} className={active ? 'bg-[var(--brand-soft)]' : ''}>
+                    <TableCell>
+                      <button type="button" className="min-w-0 text-left" onClick={() => openWorkspace(registration.id, 'summary')}>
+                        <p className={cn('truncate font-medium', active ? 'text-primary' : 'text-textPrimary')}>
+                          {registration.team?.name ?? `Time #${registration.teamId}`}
+                        </p>
+                        <p className="truncate text-xs text-textSecondary">{registration.team?.city ?? 'Sem cidade informada'}</p>
+                      </button>
+                    </TableCell>
+                    <TableCell className="text-sm text-textSecondary">{registration.team?.shortName ?? '—'}</TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariant(registration.registrationStatus)}>{labelForStatus(registration.registrationStatus)}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariant(registration.eligibilityStatus)}>{labelForStatus(registration.eligibilityStatus)}</Badge>
+                    </TableCell>
+                    <TableCell className="text-center">{registration.activePlayersCount}</TableCell>
+                    <TableCell className="text-center">{registration.pendingPlayersCount}</TableCell>
+                    <TableCell className="text-center">{registration.ineligiblePlayersCount}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {registration.pendingAlerts.length === 0 ? (
+                          <span className="text-xs text-textSecondary">Sem alertas</span>
+                        ) : (
+                          registration.pendingAlerts.slice(0, 2).map((alert) => (
+                            <Badge key={alert} variant="warning">{alertLabel(alert)}</Badge>
+                          ))
+                        )}
+                        {registration.pendingAlerts.length > 2 && (
+                          <Badge variant="default">+{registration.pendingAlerts.length - 2}</Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                        <div className="flex justify-end gap-1.5">
+                        <Button type="button" size="sm" variant="ghost" onClick={() => openWorkspace(registration.id, 'summary')}>
+                          Abrir
+                        </Button>
+                        <Button type="button" size="sm" variant="ghost" onClick={() => openWorkspace(registration.id, 'athletes')}>
+                          Atletas
+                        </Button>
+                        <Button type="button" size="sm" variant="ghost" onClick={() => openWorkspace(registration.id, 'administrative')}>
+                          Administrativo
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="gap-1 text-danger"
+                          disabled={saving}
+                          onClick={() => deleteTeamRegistration(registration.id).catch(() => undefined)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Retirar
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            )}
+          </TableBody>
+        </Table>
       </div>
 
       <TeamRegistrationWorkspaceModal
@@ -650,7 +648,7 @@ function InlineStat({
   icon: ReactNode
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-full border border-borderSoft bg-surface-contrast px-3 py-1.5 text-sm">
+    <div className="flex items-center gap-2 rounded-full border border-borderSofter bg-surface-contrast px-3 py-1.5 text-sm">
       <span className="text-textSecondary">{icon}</span>
       <span className="text-xs font-medium uppercase tracking-wide text-textSecondary">{label}</span>
       <span className="font-semibold text-textPrimary">{value}</span>
@@ -686,28 +684,29 @@ function TeamRegistrationWorkspaceModal({
   const headerRegistration = detailedRegistration ?? summaryRegistration
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="flex max-h-[92vh] w-full max-w-[1360px] flex-col overflow-hidden rounded-3xl border border-borderSoft bg-surface shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-borderSoft px-5 py-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(3,6,12,0.86)] p-4 backdrop-blur-md lg:p-6">
+      <div className="flex h-[84vh] w-[min(88vw,1480px)] flex-col overflow-hidden rounded-[28px] border border-borderSoft bg-surface-contrast shadow-popover">
+        <div className="flex items-start justify-between gap-4 border-b border-borderSofter px-6 py-4">
           <div className="min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="truncate text-lg font-semibold text-textPrimary">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-textMuted">Workspace do time inscrito</p>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h3 className="truncate text-xl font-semibold text-textPrimary">
                 {headerRegistration.team?.name ?? `Time #${headerRegistration.teamId}`}
               </h3>
               <Badge variant={statusVariant(headerRegistration.registrationStatus)}>{labelForStatus(headerRegistration.registrationStatus)}</Badge>
               <Badge variant={statusVariant(headerRegistration.eligibilityStatus)}>{labelForStatus(headerRegistration.eligibilityStatus)}</Badge>
             </div>
-            <p className="text-sm text-textSecondary">
+            <p className="text-xs text-textSecondary">
               {season.label ?? season.name} • {season.season}
             </p>
           </div>
 
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+          <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col px-5 py-4">
+        <div className="flex min-h-0 flex-1 flex-col px-6 py-4">
           <Tabs
             options={[
               { value: 'summary', label: 'Resumo' },
@@ -716,10 +715,11 @@ function TeamRegistrationWorkspaceModal({
             ]}
             value={activeTab}
             onChange={(value) => onTabChange(value as WorkspaceTab)}
-            className="w-fit"
+            variant="workspace"
+            className="max-w-3xl"
           />
 
-          <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-2 pr-1">
+          <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-2 pr-2">
             {activeTab === 'summary' && (
               <SummaryTab registration={headerRegistration} />
             )}
@@ -777,19 +777,24 @@ function SummaryTab({ registration }: { registration: CompetitionSeasonTeamRegis
         <SummaryPill label="Total" value={registration.playersCount} icon={<BadgeCheck className="h-4 w-4" />} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)]">
-        <div className="rounded-2xl border border-borderSoft bg-surface-contrast p-4">
-          <p className="text-sm font-semibold text-textPrimary">Resumo do time inscrito</p>
-          <div className="mt-3 grid gap-2 text-sm text-textSecondary">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)]">
+        <div className="rounded-2xl bg-surface-elevated p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-textPrimary">Contexto da inscrição</p>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant={statusVariant(registration.registrationStatus)}>{labelForStatus(registration.registrationStatus)}</Badge>
+              <Badge variant={statusVariant(registration.eligibilityStatus)}>{labelForStatus(registration.eligibilityStatus)}</Badge>
+            </div>
+          </div>
+          <div className="mt-3 grid gap-2 text-sm text-textSecondary md:grid-cols-2">
             <p>Time: <span className="font-medium text-textPrimary">{registration.team?.name ?? `Time #${registration.teamId}`}</span></p>
             <p>Sigla: <span className="font-medium text-textPrimary">{registration.team?.shortName ?? '—'}</span></p>
             <p>Cidade: <span className="font-medium text-textPrimary">{registration.team?.city ?? '—'}</span></p>
-            <p>Workflow: <span className="font-medium text-textPrimary">{labelForStatus(registration.registrationStatus)}</span></p>
-            <p>Elegibilidade: <span className="font-medium text-textPrimary">{labelForStatus(registration.eligibilityStatus)}</span></p>
+            <p>Total inscrito: <span className="font-medium text-textPrimary">{registration.playersCount}</span></p>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-borderSoft bg-surface-contrast p-4">
+        <div className="rounded-2xl bg-surface-elevated p-4">
           <p className="text-sm font-semibold text-textPrimary">Alertas e pendências</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {registration.pendingAlerts.length === 0 ? (
@@ -829,10 +834,18 @@ function AthletesTab({
   const [playerDrafts, setPlayerDrafts] = useState<Record<string, PlayerDraft>>(
     Object.fromEntries((registration.players ?? []).map((player) => [player.id, buildPlayerDraft(player)])),
   )
+  const {
+    playerOptions,
+    reconcilePlayerRegistrations,
+    searchPlayers,
+    searchingPlayers,
+    updatePlayerRegistration,
+  } = registrations
 
   useEffect(() => {
-    registrations.searchPlayers(registration.teamId, '').catch(() => undefined)
-  }, [registration.teamId, registrations])
+    if (!registration.teamId) return
+    searchPlayers(registration.teamId, '').catch(() => undefined)
+  }, [registration.teamId, searchPlayers])
 
   const sortedPlayers = useMemo(() => {
     const items = [...(registration.players ?? [])]
@@ -850,14 +863,14 @@ function AthletesTab({
 
   const teamBasePlayers = useMemo(() => {
     const map = new Map<string, CompetitionSeasonRegistrationPlayerSummary>()
-    registrations.playerOptions.forEach((player) => map.set(player.id, player))
+    playerOptions.forEach((player) => map.set(player.id, player))
     sortedPlayers.forEach((player) => {
       if (!map.has(player.playerId)) {
         map.set(player.playerId, synthesizePlayerSummary(player))
       }
     })
     return [...map.values()].sort((left, right) => left.fullName.localeCompare(right.fullName, 'pt-BR'))
-  }, [registrations.playerOptions, sortedPlayers])
+  }, [playerOptions, sortedPlayers])
 
   const workingSet = useMemo(
     () => new Set(workingRegisteredPlayerIds),
@@ -912,7 +925,7 @@ function AthletesTab({
       .filter((player) => !targetActiveIds.has(player.playerId))
       .map((player) => player.id)
 
-    const result = await registrations.reconcilePlayerRegistrations(registration.id, { add, remove })
+    const result = await reconcilePlayerRegistrations(registration.id, { add, remove })
     if (result.added > 0 || result.removed > 0) {
       setSelectedAvailableIds([])
       setSelectedRegisteredIds([])
@@ -942,8 +955,8 @@ function AthletesTab({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-borderSoft bg-surface-contrast">
-        <div className="flex flex-col gap-3 border-b border-borderSoft px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="rounded-3xl bg-surface-elevated p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="info">{workingRegisteredPlayerIds.length} inscritos no rascunho</Badge>
             <Badge variant="default">{selectedAvailableIds.length} para entrar</Badge>
@@ -970,27 +983,41 @@ function AthletesTab({
           </div>
         </div>
 
-        <div className="grid min-h-0 gap-0 xl:grid-cols-[minmax(0,1fr)_88px_minmax(0,1fr)]">
+        <div className="mt-4 grid min-h-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_116px_minmax(0,1fr)]">
           <TransferList
             title="Disponíveis"
             helper="Atletas do time base"
             filterValue={availableFilter}
             onFilterChange={setAvailableFilter}
-            loading={registrations.searchingPlayers}
+            loading={searchingPlayers}
             players={availablePlayers}
             selectedIds={selectedAvailableIds}
             onToggle={(playerId) => setSelectedAvailableIds((current) => current.includes(playerId) ? current.filter((id) => id !== playerId) : [...current, playerId])}
           />
 
-          <div className="flex flex-row items-center justify-center gap-2 border-y border-borderSoft p-3 xl:flex-col xl:border-x xl:border-y-0">
-            <Button type="button" variant="outline" className="w-full gap-2" onClick={moveToRegistered} disabled={selectedAvailableIds.length === 0}>
-              <ArrowRight className="h-4 w-4" />
-              <span className="hidden xl:inline">Entrar</span>
-            </Button>
-            <Button type="button" variant="outline" className="w-full gap-2" onClick={moveToAvailable} disabled={selectedRegisteredIds.length === 0}>
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden xl:inline">Sair</span>
-            </Button>
+          <div className="sticky top-3 z-10 flex self-start xl:top-4">
+            <div className="flex w-full min-w-[116px] flex-row gap-2 rounded-2xl border border-borderSofter bg-[color:color-mix(in_srgb,var(--surface-contrast)_92%,transparent)] p-2 shadow-card backdrop-blur-sm xl:flex-col">
+              <Button
+                type="button"
+                variant="primary"
+                className="w-full gap-2"
+                onClick={moveToRegistered}
+                disabled={selectedAvailableIds.length === 0}
+              >
+                <ArrowRight className="h-4 w-4" />
+                <span className="hidden xl:inline">Entrar</span>
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full gap-2"
+                onClick={moveToAvailable}
+                disabled={selectedRegisteredIds.length === 0}
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden xl:inline">Sair</span>
+              </Button>
+            </div>
           </div>
 
           <TransferList
@@ -1005,7 +1032,7 @@ function AthletesTab({
           />
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-borderSoft px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mt-4 flex flex-col gap-3 rounded-2xl bg-surface-contrast px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
           <p className="text-sm text-textSecondary">
             Confirme as mudanças de elenco e ajuste camisa, posição e capitão na tabela logo abaixo.
           </p>
@@ -1027,109 +1054,107 @@ function AthletesTab({
             Este time ainda não possui atletas inscritos na temporada.
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-borderSoft">
-            <Table className="min-w-[1040px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Atleta</TableHead>
-                  <TableHead>Workflow</TableHead>
-                  <TableHead>Elegibilidade</TableHead>
-                  <TableHead>Camisa</TableHead>
-                  <TableHead>Posição</TableHead>
-                  <TableHead>Capitão</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedPlayers.map((player) => {
-                  const draft = playerDrafts[player.id] ?? buildPlayerDraft(player)
+          <Table className="min-w-[1040px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Atleta</TableHead>
+                <TableHead>Workflow</TableHead>
+                <TableHead>Elegibilidade</TableHead>
+                <TableHead>Camisa</TableHead>
+                <TableHead>Posição</TableHead>
+                <TableHead>Capitão</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedPlayers.map((player) => {
+                const draft = playerDrafts[player.id] ?? buildPlayerDraft(player)
 
-                  return (
-                    <TableRow key={player.id} className={!player.isActive ? 'opacity-65' : ''}>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-medium text-textPrimary">{player.player?.fullName ?? `Atleta #${player.playerId}`}</p>
-                            <Badge variant={player.isActive ? 'success' : 'default'}>
-                              {player.isActive ? 'Ativo' : 'Inativo'}
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-textSecondary">
-                            {player.player?.nickname ? `${player.player.nickname} • ` : ''}{player.player?.positionName ?? 'Posição não informada'}
-                          </p>
+                return (
+                  <TableRow key={player.id} className={!player.isActive ? 'opacity-65' : ''}>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-medium text-textPrimary">{player.player?.fullName ?? `Atleta #${player.playerId}`}</p>
+                          <Badge variant={player.isActive ? 'success' : 'default'}>
+                            {player.isActive ? 'Ativo' : 'Inativo'}
+                          </Badge>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={draft.registrationStatus}
-                          onChange={(event) => handlePlayerDraftChange(player.id, { registrationStatus: event.target.value as RegistrationWorkflowStatus })}
+                        <p className="text-xs text-textSecondary">
+                          {player.player?.nickname ? `${player.player.nickname} • ` : ''}{player.player?.positionName ?? 'Posição não informada'}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={draft.registrationStatus}
+                        onChange={(event) => handlePlayerDraftChange(player.id, { registrationStatus: event.target.value as RegistrationWorkflowStatus })}
+                      >
+                        {workflowOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={draft.eligibilityStatus}
+                        onChange={(event) => handlePlayerDraftChange(player.id, { eligibilityStatus: event.target.value as RegistrationEligibilityStatus })}
+                      >
+                        {eligibilityOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Input value={draft.shirtNumber} onChange={(event) => handlePlayerDraftChange(player.id, { shirtNumber: event.target.value })} placeholder="Nº" />
+                    </TableCell>
+                    <TableCell>
+                      <Input value={draft.position} onChange={(event) => handlePlayerDraftChange(player.id, { position: event.target.value })} placeholder="Posição" />
+                    </TableCell>
+                    <TableCell>
+                      <label className="flex items-center justify-center">
+                        <input
+                          type="checkbox"
+                          checked={draft.isCaptain}
+                          onChange={(event) => handlePlayerDraftChange(player.id, { isCaptain: event.target.checked })}
+                          className="h-4 w-4 accent-primary"
+                        />
+                      </label>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={saving}
+                          onClick={() => updatePlayerRegistration(player.id, {
+                            registrationStatus: draft.registrationStatus,
+                            eligibilityStatus: draft.eligibilityStatus,
+                            shirtNumber: draft.shirtNumber.trim() ? Number(draft.shirtNumber) : null,
+                            position: draft.position.trim() || null,
+                            isCaptain: draft.isCaptain,
+                          }).catch(() => undefined)}
                         >
-                          {workflowOptions.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                          ))}
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={draft.eligibilityStatus}
-                          onChange={(event) => handlePlayerDraftChange(player.id, { eligibilityStatus: event.target.value as RegistrationEligibilityStatus })}
+                          Salvar
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="text-danger"
+                          disabled={saving}
+                          onClick={() => registrations.deletePlayerRegistration(player.id).catch(() => undefined)}
                         >
-                          {eligibilityOptions.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                          ))}
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Input value={draft.shirtNumber} onChange={(event) => handlePlayerDraftChange(player.id, { shirtNumber: event.target.value })} placeholder="Nº" />
-                      </TableCell>
-                      <TableCell>
-                        <Input value={draft.position} onChange={(event) => handlePlayerDraftChange(player.id, { position: event.target.value })} placeholder="Posição" />
-                      </TableCell>
-                      <TableCell>
-                        <label className="flex items-center justify-center">
-                          <input
-                            type="checkbox"
-                            checked={draft.isCaptain}
-                            onChange={(event) => handlePlayerDraftChange(player.id, { isCaptain: event.target.checked })}
-                            className="h-4 w-4 accent-red-primary dark:accent-dark-red-primary"
-                          />
-                        </label>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={saving}
-                            onClick={() => registrations.updatePlayerRegistration(player.id, {
-                              registrationStatus: draft.registrationStatus,
-                              eligibilityStatus: draft.eligibilityStatus,
-                              shirtNumber: draft.shirtNumber.trim() ? Number(draft.shirtNumber) : null,
-                              position: draft.position.trim() || null,
-                              isCaptain: draft.isCaptain,
-                            }).catch(() => undefined)}
-                          >
-                            Salvar
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="text-secondary"
-                            disabled={saving}
-                            onClick={() => registrations.deletePlayerRegistration(player.id).catch(() => undefined)}
-                          >
-                            Retirar
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                          Retirar
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
         )}
       </div>
     </div>
@@ -1153,11 +1178,11 @@ function AdministrativeTab({
   })
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-      <div className="rounded-2xl border border-borderSoft bg-surface-contrast p-4">
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.86fr)]">
+      <div className="rounded-2xl bg-surface-elevated p-4">
         <p className="text-sm font-semibold text-textPrimary">Administrativo da inscrição</p>
-        <div className="mt-4 space-y-4">
-          <label className="space-y-2 text-sm">
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <label className="space-y-2 text-sm md:col-span-1">
             <span className="text-textSecondary">Workflow</span>
             <Select
               value={teamForm.registrationStatus}
@@ -1169,7 +1194,7 @@ function AdministrativeTab({
             </Select>
           </label>
 
-          <label className="space-y-2 text-sm">
+          <label className="space-y-2 text-sm md:col-span-1">
             <span className="text-textSecondary">Elegibilidade</span>
             <Select
               value={teamForm.eligibilityStatus}
@@ -1181,16 +1206,16 @@ function AdministrativeTab({
             </Select>
           </label>
 
-          <label className="space-y-2 text-sm">
+          <label className="space-y-2 text-sm md:col-span-2">
             <span className="text-textSecondary">Notas</span>
             <textarea
               value={teamForm.notes}
               onChange={(event) => setTeamForm((current) => ({ ...current, notes: event.target.value }))}
-              className="min-h-24 w-full rounded-md border border-borderSoft bg-surface-elevated px-3 py-3 text-sm text-textPrimary shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text"
+              className="field-area min-h-20"
             />
           </label>
 
-          <label className="space-y-2 text-sm">
+          <label className="space-y-2 text-sm md:col-span-2">
             <span className="text-textSecondary">Motivo de rejeição</span>
             <Input
               value={teamForm.rejectionReason}
@@ -1198,26 +1223,28 @@ function AdministrativeTab({
             />
           </label>
 
-          <Button
-            type="button"
-            disabled={saving}
-            className="w-full gap-2"
-            onClick={() => updateTeamRegistration(registration.id, {
-              registrationStatus: teamForm.registrationStatus,
-              eligibilityStatus: teamForm.eligibilityStatus,
-              notes: teamForm.notes.trim() || null,
-              rejectionReason: teamForm.rejectionReason.trim() || null,
-            }).catch(() => undefined)}
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
-            Salvar administrativo
-          </Button>
+          <div className="md:col-span-2">
+            <Button
+              type="button"
+              disabled={saving}
+              className="w-full gap-2 md:w-auto"
+              onClick={() => updateTeamRegistration(registration.id, {
+                registrationStatus: teamForm.registrationStatus,
+                eligibilityStatus: teamForm.eligibilityStatus,
+                notes: teamForm.notes.trim() || null,
+                rejectionReason: teamForm.rejectionReason.trim() || null,
+              }).catch(() => undefined)}
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
+              Salvar administrativo
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-borderSoft bg-surface-contrast p-4">
+      <div className="rounded-2xl bg-surface-elevated p-4">
         <p className="text-sm font-semibold text-textPrimary">Linha do tempo</p>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <CompactDate label="Enviada em" value={registration.submittedAt} />
           <CompactDate label="Revisada em" value={registration.reviewedAt} />
           <CompactDate label="Aprovada em" value={registration.approvedAt} />
@@ -1232,7 +1259,7 @@ function AdministrativeTab({
 
 function CompactDate({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div className="rounded-xl border border-borderSoft bg-surface-muted px-4 py-3">
+    <div className="rounded-xl bg-surface-contrast px-4 py-3">
       <p className="text-xs uppercase tracking-wide text-textSecondary">{label}</p>
       <p className="mt-1 text-sm font-medium text-textPrimary">{formatDateTime(value)}</p>
     </div>
@@ -1259,8 +1286,8 @@ function TransferList({
   onToggle: (playerId: string) => void
 }) {
   return (
-    <div className="flex min-h-[360px] flex-col">
-      <div className="border-b border-borderSoft px-4 py-3">
+    <div className="flex min-h-[400px] flex-col rounded-2xl bg-surface-contrast">
+      <div className="border-b border-borderSofter px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-textPrimary">{title}</p>
@@ -1278,7 +1305,7 @@ function TransferList({
 
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         {loading ? (
-          <div className="flex items-center gap-3 rounded-xl border border-borderSoft bg-surface-muted px-4 py-3 text-textSecondary">
+          <div className="flex items-center gap-3 rounded-xl bg-surface-elevated px-4 py-3 text-textSecondary">
             <Loader2 className="h-4 w-4 animate-spin" />
             Buscando atletas...
           </div>
@@ -1297,15 +1324,15 @@ function TransferList({
                   className={cn(
                     'flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition',
                     active
-                      ? 'border-red-primary bg-red-primary/10'
-                      : 'border-borderSoft bg-surface-contrast hover:border-red-primary/25',
+                      ? 'border-[color:var(--brand-soft-border)] bg-[var(--brand-soft)]'
+                      : 'border-borderSofter bg-surface-contrast hover:border-[color:var(--brand-soft-border)] hover:bg-surface-elevated',
                   )}
                 >
                   <input
                     type="checkbox"
                     checked={active}
                     onChange={() => onToggle(player.id)}
-                    className="mt-1 h-4 w-4 accent-red-primary dark:accent-dark-red-primary"
+                    className="mt-1 h-4 w-4 accent-primary"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">

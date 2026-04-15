@@ -9,6 +9,8 @@ import { useI18n } from '@/lib/i18n'
 interface TopNavProps {
   title?: string
   subtitle?: string
+  userName?: string
+  userEmail?: string
   onMenuToggle?: () => void
   onOpenSettings?: () => void
   onRefresh?: () => void
@@ -34,10 +36,10 @@ export function TopNav({
   }))
 
   return (
-    <header className={cn('header-panel flex flex-wrap items-center justify-between gap-4 rounded-xl px-4 py-4 shadow-card sm:px-6', className)}>
+    <header className={cn('header-panel flex flex-wrap items-center justify-between gap-4 rounded-2xl px-4 py-4 sm:px-6', className)}>
       <div className="space-y-1">
-        {title && <p className="text-xs uppercase tracking-[0.28em] text-textSecondary dark:text-dark-subtitle">{title}</p>}
-        {subtitle && <p className="text-xl font-semibold text-textPrimary dark:text-dark-text">{subtitle}</p>}
+        {title && <p className="text-xs uppercase tracking-[0.28em] text-textMuted">{title}</p>}
+        {subtitle && <p className="text-xl font-semibold text-textPrimary">{subtitle}</p>}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -51,7 +53,7 @@ export function TopNav({
                 size="sm"
                 className={cn(
                   'h-10 w-10 px-0 font-semibold',
-                  isActive ? 'border-borderSoft bg-card text-accent shadow-card dark:border-dark-border dark:bg-dark-surface2' : '',
+                  isActive ? 'border-[color:var(--brand-soft-border)] bg-[var(--brand-soft)] text-primary' : '',
                 )}
                 aria-label={label}
                 aria-pressed={isActive}
@@ -91,7 +93,7 @@ export function TopNav({
         {onMenuToggle && (
           <button
             type="button"
-            className="rounded-md border border-borderSoft bg-surface-contrast px-3 py-2 text-textPrimary transition hover:border-borderStrong dark:border-dark-border dark:bg-dark-surface dark:text-dark-text lg:hidden"
+            className="rounded-xl border border-borderSofter bg-surface-contrast px-3 py-2 text-textPrimary transition hover:bg-surface-elevated lg:hidden"
             onClick={onMenuToggle}
             aria-label="Abrir navegação"
           >

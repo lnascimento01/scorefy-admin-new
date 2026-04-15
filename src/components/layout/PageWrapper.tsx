@@ -24,10 +24,10 @@ export function PageWrapper({ title, description, actions, children, compact = f
       {(title || description || actions) && (
         <div className="page-section__header">
           <div className="space-y-1">
-            <h2 className="text-2xl font-semibold text-textPrimary dark:text-dark-text">{title}</h2>
-            {description && <p className="max-w-prose text-sm leading-relaxed text-textSecondary dark:text-dark-subtitle">{description}</p>}
+            <h2 className="text-2xl font-semibold text-textPrimary">{title}</h2>
+            {description && <p className="max-w-prose text-sm leading-relaxed text-textSecondary">{description}</p>}
           </div>
-          {actions && <div className="flex flex-wrap gap-2 text-sm text-textSecondary dark:text-dark-subtitle">{actions}</div>}
+          {actions && <div className="flex flex-wrap gap-2 text-sm text-textSecondary">{actions}</div>}
         </div>
       )}
       {children}

@@ -12,6 +12,8 @@ const config: Config = {
         accent: 'var(--color-accent)',
         success: 'var(--color-success)',
         warning: 'var(--color-warning)',
+        danger: 'var(--color-danger)',
+        info: 'var(--color-info)',
         surface: {
           DEFAULT: 'var(--color-surface)',
           contrast: 'var(--color-surface-contrast)',
@@ -22,13 +24,16 @@ const config: Config = {
         onSurface: 'var(--color-on-surface)',
         textPrimary: 'var(--color-text-primary)',
         textSecondary: 'var(--color-text-secondary)',
+        textMuted: 'var(--color-text-muted)',
         textPlaceholder: 'var(--color-text-placeholder)',
+        textDisabled: 'var(--color-disabled)',
         disabled: 'var(--color-disabled)',
         borderSoft: 'var(--border-soft)',
+        borderSofter: 'var(--border-softer)',
         borderStrong: 'var(--border-strong)',
         red: {
-          primary: '#E52534',
-          hover: '#FF3B46'
+          primary: 'var(--color-danger)',
+          hover: '#ff7484'
         },
         light: {
           bg: '#F6F6F7',
@@ -45,18 +50,18 @@ const config: Config = {
           300: '#8E8E93'
         },
         dark: {
-          bg: '#0D0D0D',
-          surface: '#1C1C1E',
-          surface2: '#2C2C2E',
-          border: '#3A3A3C',
-          text: '#FFFFFF',
-          subtitle: '#B3B3B3',
-          textSecondary: '#B3B3B3',
-          accent: '#0A84FF',
-          accentHover: '#409CFF',
+          bg: '#0B111A',
+          surface: '#0F1724',
+          surface2: '#121D2E',
+          border: 'rgba(160, 190, 255, 0.10)',
+          text: '#EAF1FF',
+          subtitle: 'rgba(234,241,255,0.52)',
+          textSecondary: 'rgba(234,241,255,0.72)',
+          accent: '#4F8CFF',
+          accentHover: '#3B78F2',
           red: {
-            primary: '#E52534',
-            hover: '#FF3B46'
+            primary: '#FF5B6E',
+            hover: '#ff7484'
           }
         },
         status: {
@@ -71,6 +76,8 @@ const config: Config = {
       },
       boxShadow: {
         card: 'var(--shadow-card)',
+        popover: 'var(--shadow-popover)',
+        focus: 'var(--focus-ring)',
         apple: '0 2px 12px rgba(0,0,0,0.08)'
       },
       borderRadius: {

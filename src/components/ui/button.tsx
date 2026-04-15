@@ -3,15 +3,15 @@
 import { cn } from '@/lib/utils/cn'
 import type { ButtonHTMLAttributes } from 'react'
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost'
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger'
 type ButtonSize = 'sm' | 'md'
 
 const variantClass: Record<ButtonVariant, string> = {
-  primary: 'bg-red-primary text-white hover:bg-red-hover shadow-sm',
-  secondary: 'bg-gray-100 text-black hover:bg-gray-300/80 dark:bg-dark-surface dark:text-dark-text dark:hover:bg-dark-surface2',
-  outline:
-    'border border-borderSoft bg-transparent text-textPrimary hover:bg-surface-muted dark:border-dark-border dark:text-dark-text dark:hover:bg-dark-surface2',
-  ghost: 'text-textSecondary hover:text-textPrimary hover:bg-surface-muted'
+  primary: 'border border-transparent bg-primary text-onPrimary hover:bg-[var(--color-primary-hover)] shadow-card',
+  secondary: 'border border-borderSoft bg-surface-elevated text-textPrimary hover:bg-surface-raised',
+  outline: 'border border-borderSofter bg-transparent text-textSecondary hover:bg-surface-elevated hover:text-textPrimary',
+  ghost: 'border border-transparent bg-transparent text-textSecondary hover:bg-[rgba(255,255,255,0.06)] hover:text-textPrimary',
+  danger: 'border border-[rgba(255,91,110,0.25)] bg-[rgba(255,91,110,0.16)] text-danger hover:bg-[rgba(255,91,110,0.22)]'
 }
 
 const sizeClass: Record<ButtonSize, string> = {
@@ -28,7 +28,7 @@ export function Button({ variant = 'primary', size = 'md', className, ...props }
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center rounded-md font-semibold transition disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex items-center justify-center rounded-xl font-semibold transition focus-visible:outline-none focus-visible:shadow-focus disabled:cursor-not-allowed disabled:opacity-60',
         variantClass[variant],
         sizeClass[size],
         className,
