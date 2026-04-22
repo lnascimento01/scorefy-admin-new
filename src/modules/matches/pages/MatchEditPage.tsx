@@ -11,8 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { useMatchEditor } from '../hooks/useMatchEditor'
-import type { MatchStatus } from '../types'
 import type { MatchControlDetail } from '@/modules/match-control/types'
+import { formatMatchStatusLabel } from '../utils/status'
 
 type MatchEditorState = ReturnType<typeof useMatchEditor>
 
@@ -28,17 +28,6 @@ function parseIsoDate(value: string) {
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) return null
   return parsed.toISOString()
-}
-
-const statusLabel: Record<MatchStatus, string> = {
-  scheduled: 'Agendada',
-  not_started: 'Não iniciada',
-  live: 'Ao vivo',
-  paused: 'Pausada',
-  halftime: 'Intervalo',
-  final: 'Finalizada',
-  finished: 'Finalizada',
-  canceled: 'Cancelada'
 }
 
 export function MatchEditPage({ currentUser, matchId }: { currentUser: AuthProfile; matchId: string }) {
@@ -81,7 +70,7 @@ export function MatchEditPage({ currentUser, matchId }: { currentUser: AuthProfi
             <div className="card space-y-3 p-5">
               <p className="text-sm font-semibold text-textPrimary">Situação atual</p>
               <ul className="space-y-2 text-sm text-textSecondary">
-                <li>• Status: {statusLabel[detail.status as MatchStatus] ?? detail.status}</li>
+                <li>• Status: {formatMatchStatusLabel(detail.status)}</li>
                 <li>• Competição: {detail.competitionName ?? '—'}</li>
                 <li>• Local: {detail.venueName ?? 'Local indefinido'}</li>
                 <li>• Início previsto: {detail.startAt ? new Date(detail.startAt).toLocaleString('pt-BR') : '—'}</li>

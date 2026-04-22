@@ -7,7 +7,7 @@ import type { Language } from '@/lib/i18n'
 import { Flag, PauseCircle, PlayCircle, RotateCcw, Timer, Octagon } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
-import { useEffect, useState, type ChangeEvent } from 'react'
+import { useState, type ChangeEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Button as UiButton } from '@/components/ui/button'
 
@@ -22,7 +22,6 @@ interface ControlActionsProps {
   loadingAction: MatchControlAction | null
   onAction: (action: MatchControlAction, payload?: { reason?: string }) => void
   lastSync?: string | null
-  isFinalStatus?: boolean
 }
 
 export function ControlActions({
@@ -35,19 +34,18 @@ export function ControlActions({
   canCancel,
   loadingAction,
   onAction,
-  lastSync,
-  isFinalStatus = false
+  lastSync
 }: ControlActionsProps) {
   const { dictionary, language } = useI18n()
   const copy = dictionary.matchControl.controls
-  const [resumePrompt, setResumePrompt] = useState<'default' | 'final' | null>(null)
+  const [resumePrompt, setResumePrompt] = useState(false)
   const [pausePrompt, setPausePrompt] = useState(false)
   const [pauseReason, setPauseReason] = useState('')
   const [pauseError, setPauseError] = useState<string | null>(null)
 
   const handleAction = (action: MatchControlAction) => {
     if (action === 'resume') {
-      setResumePrompt(isFinalStatus ? 'final' : 'default')
+      setResumePrompt(true)
       return
     }
     if (action === 'pause') {
@@ -99,32 +97,32 @@ export function ControlActions({
       label: copy.buttons.pause,
       loadingLabel: copy.buttons.pausing,
       icon: PauseCircle,
-    variant: 'secondary',
-    highlight: 'text-amber-200',
-    enabled: canPause
-  },
-  {
-    action: 'finish',
-    label: copy.buttons.finish,
-    loadingLabel: copy.buttons.finishing,
-    icon: Flag,
-    variant: 'outline',
-    highlight: 'text-primary',
-    enabled: canFinish
-  },
-  {
-    action: 'startNextPeriod',
-    label: copy.buttons.startNextPeriod,
-    loadingLabel: copy.buttons.startingNextPeriod,
-    icon: Timer,
-    variant: 'secondary',
-    highlight: 'text-sky-300',
-    enabled: canStartNextPeriod
-  },
-  {
-    action: 'cancel',
-    label: copy.buttons.cancel,
-    loadingLabel: copy.buttons.canceling,
+      variant: 'secondary',
+      highlight: 'text-amber-200',
+      enabled: canPause
+    },
+    {
+      action: 'finish',
+      label: copy.buttons.finish,
+      loadingLabel: copy.buttons.finishing,
+      icon: Flag,
+      variant: 'outline',
+      highlight: 'text-primary',
+      enabled: canFinish
+    },
+    {
+      action: 'startNextPeriod',
+      label: copy.buttons.startNextPeriod,
+      loadingLabel: copy.buttons.startingNextPeriod,
+      icon: Timer,
+      variant: 'secondary',
+      highlight: 'text-sky-300',
+      enabled: canStartNextPeriod
+    },
+    {
+      action: 'cancel',
+      label: copy.buttons.cancel,
+      loadingLabel: copy.buttons.canceling,
       icon: Octagon,
       variant: 'outline',
       highlight: 'text-primary',
@@ -144,15 +142,15 @@ export function ControlActions({
       </div>
       {resumePrompt && (
         <ResumeConfirmModal
-          title={resumePrompt === 'final' ? copy.resumeFinalConfirm : copy.resumeConfirm}
-          description={resumePrompt === 'final' ? copy.resumeFinalDescription : copy.resumeDescription}
+          title={copy.resumeConfirm}
+          description={copy.resumeDescription}
           confirmLabel={copy.buttons.resume}
           cancelLabel={dictionary.actions.cancel ?? 'Cancelar'}
           onConfirm={() => {
-            setResumePrompt(null)
+            setResumePrompt(false)
             onAction('resume')
           }}
-          onCancel={() => setResumePrompt(null)}
+          onCancel={() => setResumePrompt(false)}
         />
       )}
       {pausePrompt && (
@@ -173,13 +171,13 @@ export function ControlActions({
         />
       )}
       <div className="flex flex-wrap gap-2">
-        {buttons.map(({ action, label, loadingLabel, icon: Icon, variant, highlight, enabled }) => (
+        {buttons.filter(({ enabled }) => enabled).map(({ action, label, loadingLabel, icon: Icon, variant, highlight }) => (
           <Button
             key={action}
             variant={variant}
             size="sm"
             onClick={() => handleAction(action)}
-            disabled={!enabled || loadingAction !== null}
+            disabled={loadingAction !== null}
             className={cn(
               'flex-1 min-w-[140px] justify-center gap-2 rounded-lg border border-borderSoft/40 bg-[var(--surface-muted)] text-sm font-semibold text-textPrimary',
               variant === 'primary' && 'border-transparent bg-primary text-onPrimary hover:bg-primary/90',
@@ -239,14 +237,7 @@ function ResumeConfirmModal({
   onConfirm: () => void
   onCancel: () => void
 }) {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-    return () => setMounted(false)
-  }, [])
-
-  if (!mounted || typeof document === 'undefined') return null
+  if (typeof document === 'undefined') return null
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8">
@@ -295,14 +286,7 @@ function PauseReasonModal({
   onConfirm: () => void
   onCancel: () => void
 }) {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-    return () => setMounted(false)
-  }, [])
-
-  if (!mounted || typeof document === 'undefined') return null
+  if (typeof document === 'undefined') return null
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8">

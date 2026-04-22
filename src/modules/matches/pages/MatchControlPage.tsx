@@ -30,6 +30,13 @@ import type { Language, TranslationRecord } from '@/lib/i18n'
 import dynamic from 'next/dynamic'
 import { toast } from 'react-toastify'
 import { formatClock } from '@/modules/match-control/utils/time'
+import { resolveMatchActionError } from '../utils/errors'
+import {
+  formatMatchStatusLabel,
+  getMatchActionCapabilities,
+  getMatchStatusVariant,
+  type MatchStatusVariant
+} from '../utils/status'
 import 'react-toastify/dist/ReactToastify.css'
 
 const ToastViewport = dynamic(async () => {
@@ -103,14 +110,17 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
   }, [detail?.period, snapshot?.period])
 
   const rawStatus = snapshot?.status ?? detail?.status ?? 'scheduled'
-  const normalizedStatus = (rawStatus ?? '').toLowerCase()
-  const statusLabel = resolveStatusLabel(rawStatus, dictionary.dashboard.status)
-  const isPreMatch = ['not_started', 'scheduled', 'pre_match', 'pending', 'awaiting'].includes(normalizedStatus)
-  const isInProgress = ['live', 'in_progress', 'started'].includes(normalizedStatus)
-  const isPausedState = ['paused'].includes(normalizedStatus)
-  const isIntervalState = ['halftime', 'interval'].includes(normalizedStatus)
-  const isCanceledState = ['cancelled', 'canceled'].includes(normalizedStatus)
-  const isFinalStatus = ['final', 'finished', 'completed'].includes(normalizedStatus) || isCanceledState
+  const statusLabel = formatMatchStatusLabel(rawStatus, dictionary.dashboard.status)
+  const statusVariant = getMatchStatusVariant(rawStatus)
+  const {
+    canStart,
+    canPause,
+    canResume,
+    canFinish,
+    canStartNextPeriod,
+    canCancel: canCancelMatch,
+    canGenerateScoresheet
+  } = getMatchActionCapabilities(rawStatus)
 
   const scoreboardHome = detail
     ? { ...detail.homeTeam, score: snapshot?.home.score ?? detail.homeTeam.score }
@@ -118,13 +128,6 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
   const scoreboardAway = detail
     ? { ...detail.awayTeam, score: snapshot?.away.score ?? detail.awayTeam.score }
     : null
-
-  const canStart = !isFinalStatus && isPreMatch
-  const canResume = !isCanceledState && (isPausedState || isIntervalState || isFinalStatus)
-  const canPause = !isFinalStatus && isInProgress
-  const canFinish = !isFinalStatus && (isInProgress || isPausedState || isIntervalState)
-  const canStartNextPeriod = !isCanceledState && isIntervalState
-  const canCancelMatch = !isFinalStatus && !isCanceledState
 
   const handleQuickAction = (action: MatchQuickAction) => {
     if (action.team === 'both') return
@@ -181,7 +184,7 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
       setScoresheetMessage(matchControlCopy.alerts.scoresheetSuccess)
     } catch (err) {
       console.error('Failed to generate scoresheet', err)
-      setScoresheetMessage(matchControlCopy.alerts.scoresheetError)
+      setScoresheetMessage(resolveMatchActionError(err, matchControlCopy.alerts.scoresheetError))
     } finally {
       setScoresheetLoading(false)
     }
@@ -336,9 +339,11 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
             <Button variant="outline" onClick={handleToggleFullscreen}>
               {isFullscreen ? matchControlCopy.header.fullscreen.exit : matchControlCopy.header.fullscreen.enter}
             </Button>
-            <Button onClick={handleDownloadScoresheet} disabled={scoresheetLoading}>
-              {scoresheetLoading ? matchControlCopy.header.scoresheet.loading : matchControlCopy.header.scoresheet.view}
-            </Button>
+            {canGenerateScoresheet && (
+              <Button onClick={handleDownloadScoresheet} disabled={scoresheetLoading}>
+                {scoresheetLoading ? matchControlCopy.header.scoresheet.loading : matchControlCopy.header.scoresheet.view}
+              </Button>
+            )}
           </div>
 
           {loading && (
@@ -355,9 +360,9 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
                 away={scoreboardAway}
                 periodLabel={periodLabel}
                 statusLabel={statusLabel}
+                statusVariant={statusVariant}
                 dictionary={matchControlCopy}
                 language={language}
-                isFinalStatus={isFinalStatus}
                 onEditClock={() => setClockDialogOpen(true)}
                 clockState={matchClockState}
               />
@@ -408,7 +413,6 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
                     loadingAction={loadingAction}
                     onAction={(action, payload) => handleControlAction(action, payload)}
                     lastSync={lastSyncAt}
-                    isFinalStatus={isFinalStatus}
                   />
                 </div>
               </div>
@@ -446,10 +450,6 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
 
 const localeMap: Record<Language, string> = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' }
 
-function resolveStatusLabel(status: string, map: Record<string, string>): string {
-  return map[status] ?? status
-}
-
 function formatTimestamp(
   timestamp?: string | null,
   language: Language = 'pt',
@@ -471,9 +471,9 @@ function MatchOverviewCard({
   away,
   periodLabel,
   statusLabel,
+  statusVariant,
   dictionary,
   language,
-  isFinalStatus,
   onEditClock,
   clockState
 }: {
@@ -482,9 +482,9 @@ function MatchOverviewCard({
   away: MatchControlTeamInfo
   periodLabel: string
   statusLabel: string
+  statusVariant: MatchStatusVariant
   dictionary: MatchControlDictionary
   language: Language
-  isFinalStatus: boolean
   onEditClock?: () => void
   clockState: MatchClockState
 }) {
@@ -503,7 +503,7 @@ function MatchOverviewCard({
           <p className="text-xs uppercase tracking-[0.3em] text-textSecondary">{detail.competitionName}</p>
           <p className="text-sm text-textSecondary">{detail.venueName ?? dictionary.overview.noVenue}</p>
         </div>
-        <StatusPill label={statusLabel} variant={isFinalStatus ? 'danger' : 'info'} />
+        <StatusPill label={statusLabel} variant={statusVariant} />
       </div>
       <ScoreBoard
         home={home}

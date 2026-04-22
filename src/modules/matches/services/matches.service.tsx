@@ -72,6 +72,18 @@ export const MatchesGateway = {
     return MatchControlGateway.start(matchId)
   },
 
+  async pause(matchId: string | number, payload?: { reason?: string }): Promise<MatchControlSnapshot | null> {
+    return MatchControlGateway.pause(matchId, payload)
+  },
+
+  async resume(matchId: string | number): Promise<MatchControlSnapshot | null> {
+    return MatchControlGateway.resume(matchId)
+  },
+
+  async startSecondHalf(matchId: string | number): Promise<MatchControlSnapshot | null> {
+    return MatchControlGateway.startSecondHalf(matchId)
+  },
+
   async create(payload: MatchCreatePayload): Promise<MatchControlDetail> {
     const api = await getApi()
     const { data } = await api.post(MATCHES_PATH, {

@@ -6,6 +6,8 @@ export type MatchStatus =
   | 'halftime'
   | 'final'
   | 'finished'
+  | 'postponed'
+  | 'cancelled'
   | 'canceled'
 
 export interface MatchSummary {

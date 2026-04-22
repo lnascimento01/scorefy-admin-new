@@ -50,6 +50,7 @@ export interface CompetitionSeasonListItem {
   season: string
   status: CompetitionStatus
   competitionId: string
+  availableNaipes?: CompetitionNaipe[]
   referenceYearStart?: number
   referenceYearEnd?: number
   startAt?: string | null
@@ -311,4 +312,70 @@ export interface CompetitionHandballRulesSnapshot {
   competitionSeasonId: string
   updatedAt?: string
   rules: CompetitionHandballRule
+}
+
+export type CompetitionStandingsScope = 'global' | 'stage' | 'group'
+export type CompetitionStandingsSort = 'points' | '-points' | 'goal_diff' | '-goal_diff' | 'wins' | '-wins' | 'created_at' | '-created_at'
+
+export interface CompetitionStandingStageSummary {
+  id: string
+  name: string
+  kind?: string | null
+  order?: number
+  naipe?: CompetitionNaipe | null
+}
+
+export interface CompetitionStandingGroupSummary {
+  id: string
+  name: string
+  order?: number
+  naipe?: CompetitionNaipe | null
+  stageId?: string | null
+  stage?: CompetitionStandingStageSummary | null
+}
+
+export interface CompetitionStandingTeamSummary {
+  id: string
+  name: string
+  shortName?: string
+}
+
+export interface CompetitionStandingRow {
+  id: string
+  competitionId: string
+  competitionSeasonId: string
+  naipe?: CompetitionNaipe | null
+  stageId?: string | null
+  groupId?: string | null
+  teamId: string
+  team?: CompetitionStandingTeamSummary | null
+  stage?: CompetitionStandingStageSummary | null
+  group?: CompetitionStandingGroupSummary | null
+  played: number
+  wins: number
+  draws: number
+  losses: number
+  goalsFor: number
+  goalsAgainst: number
+  goalDiff: number
+  points: number
+  rank?: number | null
+  form: string[]
+  streak?: string | null
+  winPercentage: number
+  averageGoalsFor: number
+  averageGoalsAgainst: number
+  recentResults: string[]
+  meta: JsonValue
+  updatedAt?: string
+}
+
+export interface CompetitionStandingsFilters {
+  competitionSeasonId: string
+  naipe?: CompetitionNaipe
+  stageId?: string
+  groupId?: string
+  sort?: CompetitionStandingsSort
+  page?: number
+  perPage?: number
 }

@@ -4,39 +4,34 @@ import { Loader2 } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { MatchStatus, MatchSummary } from '../types'
-
-const statusLabel: Record<MatchStatus, string> = {
-  scheduled: 'Agendada',
-  not_started: 'Não iniciada',
-  live: 'Ao vivo',
-  paused: 'Pausada',
-  halftime: 'Intervalo',
-  final: 'Finalizada',
-  finished: 'Finalizada',
-  canceled: 'Cancelada'
-}
-
-const statusVariant: Record<MatchStatus, 'info' | 'warning' | 'success' | 'danger'> = {
-  scheduled: 'info',
-  not_started: 'info',
-  live: 'danger',
-  paused: 'warning',
-  halftime: 'warning',
-  final: 'success',
-  finished: 'success',
-  canceled: 'danger'
-}
+import type { MatchSummary } from '../types'
+import {
+  formatMatchStatusLabel,
+  getMatchActionCapabilities,
+  getMatchPrimaryAction,
+  getMatchStatusVariant,
+  type MatchTransitionAction
+} from '../utils/status'
 
 interface MatchesTableProps {
   matches: MatchSummary[]
   loading?: boolean
-  onStart?: (match: MatchSummary) => void
+  onTransitionAction?: (match: MatchSummary, action: MatchTransitionAction) => void
+  onOpenEvents?: (match: MatchSummary) => void
+  onOpenScoresheet?: (match: MatchSummary) => void
   onEdit?: (match: MatchSummary) => void
-  actionMatchId?: string | null
+  actionState?: { matchId: string; action: MatchTransitionAction | 'scoresheet' } | null
 }
 
-export function MatchesTable({ matches, loading, onStart, onEdit, actionMatchId }: MatchesTableProps) {
+export function MatchesTable({
+  matches,
+  loading,
+  onTransitionAction,
+  onOpenEvents,
+  onOpenScoresheet,
+  onEdit,
+  actionState
+}: MatchesTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -57,66 +52,96 @@ export function MatchesTable({ matches, loading, onStart, onEdit, actionMatchId 
             </TableCell>
           </TableRow>
         )}
-        {matches.map((match) => (
-          <TableRow key={match.id}>
-            <TableCell>
-              <div>
-                <p className="font-semibold text-textPrimary">{match.dateLabel}</p>
-                <p className="text-xs text-textSecondary">{match.timeLabel}</p>
-              </div>
-            </TableCell>
-            <TableCell>
-              <div>
-                <p className="font-semibold text-textPrimary">
-                  {match.home.name}{' '}
-                  {match.home.short && <span className="text-xs uppercase text-textSecondary">({match.home.short})</span>}
-                </p>
-                <p className="text-xs text-textSecondary">{match.competitionName}{match.competitionSeason ? ` • ${match.competitionSeason}` : ''}</p>
-              </div>
-            </TableCell>
-            <TableCell>
-              <div>
-                <p className="font-semibold text-textPrimary">
-                  {match.away.name}{' '}
-                  {match.away.short && <span className="text-xs uppercase text-textSecondary">({match.away.short})</span>}
-                </p>
-                <p className="text-xs text-textSecondary">{match.venue ?? 'Local indefinido'}</p>
-              </div>
-            </TableCell>
-            <TableCell className="font-semibold text-textPrimary">{match.scoreLabel}</TableCell>
-            <TableCell>
-              <div className="flex flex-col gap-1">
-                <Badge variant={statusVariant[match.status]}>{statusLabel[match.status]}</Badge>
-                {match.metaSlug && <span className="text-[10px] uppercase tracking-wide text-textSecondary/70">{match.metaSlug}</span>}
-              </div>
-            </TableCell>
-            <TableCell>
-              <div className="flex items-center justify-end gap-2 text-xs text-textSecondary">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={!onStart || actionMatchId === match.id}
-                  onClick={() => onStart?.(match)}
-                >
-                  {actionMatchId === match.id ? (
-                    <span className="flex items-center gap-1">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Iniciando...
-                    </span>
-                  ) : (
-                    'Iniciar'
+        {matches.map((match) => {
+          const primaryAction = getMatchPrimaryAction(match.status)
+          const statusLabel = formatMatchStatusLabel(match.status)
+          const statusVariant = getMatchStatusVariant(match.status)
+          const { canGenerateScoresheet } = getMatchActionCapabilities(match.status)
+          const isRowBusy = actionState?.matchId === match.id
+
+          return (
+            <TableRow key={match.id}>
+              <TableCell>
+                <div>
+                  <p className="font-semibold text-textPrimary">{match.dateLabel}</p>
+                  <p className="text-xs text-textSecondary">{match.timeLabel}</p>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div>
+                  <p className="font-semibold text-textPrimary">
+                    {match.home.name}{' '}
+                    {match.home.short && <span className="text-xs uppercase text-textSecondary">({match.home.short})</span>}
+                  </p>
+                  <p className="text-xs text-textSecondary">
+                    {match.competitionName}
+                    {match.competitionSeason ? ` • ${match.competitionSeason}` : ''}
+                  </p>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div>
+                  <p className="font-semibold text-textPrimary">
+                    {match.away.name}{' '}
+                    {match.away.short && <span className="text-xs uppercase text-textSecondary">({match.away.short})</span>}
+                  </p>
+                  <p className="text-xs text-textSecondary">{match.venue ?? 'Local indefinido'}</p>
+                </div>
+              </TableCell>
+              <TableCell className="font-semibold text-textPrimary">{match.scoreLabel}</TableCell>
+              <TableCell>
+                <div className="flex flex-col gap-1">
+                  <Badge variant={statusVariant}>{statusLabel}</Badge>
+                  {match.metaSlug && <span className="text-[10px] uppercase tracking-wide text-textSecondary/70">{match.metaSlug}</span>}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center justify-end gap-2 text-xs text-textSecondary">
+                  {primaryAction && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={!onTransitionAction || isRowBusy}
+                      onClick={() => onTransitionAction?.(match, primaryAction.action)}
+                    >
+                      {isRowBusy && actionState?.action === primaryAction.action ? (
+                        <span className="flex items-center gap-1">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          {primaryAction.loadingLabel}
+                        </span>
+                      ) : (
+                        primaryAction.label
+                      )}
+                    </Button>
                   )}
-                </Button>
-                <Button size="sm" variant="outline" disabled title="Ação disponível em breve">
-                  Súmula
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => onEdit?.(match)} disabled={!onEdit}>
-                  Editar
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-        ))}
+                  <Button size="sm" variant="outline" onClick={() => onOpenEvents?.(match)} disabled={!onOpenEvents || isRowBusy}>
+                    Eventos
+                  </Button>
+                  {canGenerateScoresheet && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onOpenScoresheet?.(match)}
+                      disabled={!onOpenScoresheet || isRowBusy}
+                    >
+                      {isRowBusy && actionState?.action === 'scoresheet' ? (
+                        <span className="flex items-center gap-1">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Gerando...
+                        </span>
+                      ) : (
+                        'Súmula'
+                      )}
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" onClick={() => onEdit?.(match)} disabled={!onEdit || isRowBusy}>
+                    Editar
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          )
+        })}
         {!loading && matches.length === 0 && (
           <TableRow>
             <TableCell colSpan={6}>

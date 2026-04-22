@@ -10,6 +10,12 @@ import type {
   CompetitionHandballRulesSnapshot,
   CompetitionListFilters,
   CompetitionListMeta,
+  CompetitionStandingGroupSummary,
+  CompetitionStandingRow,
+  CompetitionStandingStageSummary,
+  CompetitionStandingTeamSummary,
+  CompetitionStandingsFilters,
+  CompetitionStandingsSort,
   CompetitionSeasonRegistrationSettings,
   CompetitionSeason,
   CompetitionSeasonCreatePayload,
@@ -27,6 +33,8 @@ const COMPETITIONS_PATH = (process.env.NEXT_PUBLIC_COMPETITIONS_PATH ?? '/v1/aut
 const COMPETITION_SEASONS_PATH = (process.env.NEXT_PUBLIC_COMPETITION_SEASONS_PATH ?? '/v1/auth/competition-seasons').replace(/\/$/, '')
 const COMPETITION_TYPES_PATH = (process.env.NEXT_PUBLIC_COMPETITION_TYPES_PATH ?? '/v1/auth/competition-types').replace(/\/$/, '')
 const COUNTRIES_PATH = (process.env.NEXT_PUBLIC_COUNTRIES_PATH ?? '/v1/auth/countries').replace(/\/$/, '')
+const STANDINGS_PATH = (process.env.NEXT_PUBLIC_STANDINGS_PATH ?? '/v1/auth/standings').replace(/\/$/, '')
+const GROUPS_PATH = (process.env.NEXT_PUBLIC_GROUPS_PATH ?? '/v1/auth/groups').replace(/\/$/, '')
 
 function asString(value: unknown): string | null {
   if (typeof value === 'string') {
@@ -65,6 +73,14 @@ function asJsonValue(value: unknown, fallback: JsonValue): JsonValue {
     return value as JsonObject
   }
   return fallback
+}
+
+function normalizeNaipes(value: unknown): CompetitionSeasonListItem['availableNaipes'] {
+  return extractArray(value)
+    .map((item) => asString(item))
+    .filter((item): item is NonNullable<CompetitionSeasonListItem['availableNaipes']>[number] => (
+      item === 'masculino' || item === 'feminino' || item === 'misto'
+    ))
 }
 
 function normalizeMeta(meta: Record<string, unknown> | undefined): CompetitionListMeta {
@@ -166,6 +182,7 @@ function normalizeSeasonListItem(raw: unknown, fallbackCompetitionId?: string): 
     season,
     status,
     competitionId,
+    availableNaipes: normalizeNaipes(record.available_naipes ?? record.availableNaipes),
     referenceYearStart: asNumber(record.reference_year_start ?? record.referenceYearStart) ?? undefined,
     referenceYearEnd: asNumber(record.reference_year_end ?? record.referenceYearEnd) ?? undefined,
     startAt: asString(record.start_at ?? record.startAt) ?? undefined,
@@ -261,6 +278,93 @@ function normalizeHandballRulesSnapshot(raw: unknown): CompetitionHandballRulesS
   }
 }
 
+function normalizeStandingStage(raw: unknown): CompetitionStandingStageSummary | null {
+  if (!raw || typeof raw !== 'object') return null
+  const record = raw as Record<string, unknown>
+  const id = asString(record.id)
+  const name = asString(record.name)
+  if (!id || !name) return null
+
+  return {
+    id,
+    name,
+    kind: asString(record.kind),
+    order: asNumber(record.order) ?? undefined,
+    naipe: (asString(record.naipe) as CompetitionStandingStageSummary['naipe']) ?? undefined,
+  }
+}
+
+function normalizeStandingGroup(raw: unknown): CompetitionStandingGroupSummary | null {
+  if (!raw || typeof raw !== 'object') return null
+  const record = raw as Record<string, unknown>
+  const id = asString(record.id)
+  const name = asString(record.name)
+  if (!id || !name) return null
+
+  return {
+    id,
+    name,
+    order: asNumber(record.order) ?? undefined,
+    naipe: (asString(record.naipe) as CompetitionStandingGroupSummary['naipe']) ?? undefined,
+    stageId: asString(record.stage_id ?? record.stageId),
+    stage: normalizeStandingStage(record.stage),
+  }
+}
+
+function normalizeStandingTeam(raw: unknown): CompetitionStandingTeamSummary | null {
+  if (!raw || typeof raw !== 'object') return null
+  const record = raw as Record<string, unknown>
+  const id = asString(record.id)
+  const name = asString(record.name)
+  if (!id || !name) return null
+
+  return {
+    id,
+    name,
+    shortName: asString(record.short_name ?? record.shortName) ?? undefined,
+  }
+}
+
+function normalizeStandingRow(raw: unknown): CompetitionStandingRow | null {
+  if (!raw || typeof raw !== 'object') return null
+  const record = raw as Record<string, unknown>
+  const id = asString(record.id)
+  const competitionId = asString(record.competition_id ?? record.competitionId)
+  const competitionSeasonId = asString(record.competition_season_id ?? record.competitionSeasonId)
+  const teamId = asString(record.team_id ?? record.teamId)
+  if (!id || !competitionId || !competitionSeasonId || !teamId) return null
+
+  return {
+    id,
+    competitionId,
+    competitionSeasonId,
+    naipe: (asString(record.naipe) as CompetitionStandingRow['naipe']) ?? undefined,
+    stageId: asString(record.stage_id ?? record.stageId),
+    groupId: asString(record.group_id ?? record.groupId),
+    teamId,
+    team: normalizeStandingTeam(record.team),
+    stage: normalizeStandingStage(record.stage),
+    group: normalizeStandingGroup(record.group),
+    played: asNumber(record.played) ?? 0,
+    wins: asNumber(record.wins) ?? 0,
+    draws: asNumber(record.draws) ?? 0,
+    losses: asNumber(record.losses) ?? 0,
+    goalsFor: asNumber(record.goals_for ?? record.goalsFor) ?? 0,
+    goalsAgainst: asNumber(record.goals_against ?? record.goalsAgainst) ?? 0,
+    goalDiff: asNumber(record.goal_diff ?? record.goalDiff) ?? 0,
+    points: asNumber(record.points) ?? 0,
+    rank: asNumber(record.rank),
+    form: extractArray(record.form).map((item) => asString(item)).filter((item): item is string => Boolean(item)),
+    streak: asString(record.streak),
+    winPercentage: asNumber(record.win_percentage ?? record.winPercentage) ?? 0,
+    averageGoalsFor: asNumber(record.average_goals_for ?? record.averageGoalsFor) ?? 0,
+    averageGoalsAgainst: asNumber(record.average_goals_against ?? record.averageGoalsAgainst) ?? 0,
+    recentResults: extractArray(record.recent_results ?? record.recentResults).map((item) => asString(item)).filter((item): item is string => Boolean(item)),
+    meta: asJsonValue(record.meta, {}),
+    updatedAt: asString(record.updated_at ?? record.updatedAt) ?? undefined,
+  }
+}
+
 function buildListParams(filters: CompetitionListFilters = {}) {
   return {
     q: filters.q?.trim() || undefined,
@@ -272,6 +376,18 @@ function buildListParams(filters: CompetitionListFilters = {}) {
     page: filters.page,
     per_page: filters.perPage,
     sort: (filters.sort ?? 'name') as CompetitionSort,
+  }
+}
+
+function buildStandingsParams(filters: CompetitionStandingsFilters) {
+  return {
+    competition_season_id: filters.competitionSeasonId,
+    naipe: filters.naipe,
+    stage_id: filters.stageId || undefined,
+    group_id: filters.groupId || undefined,
+    sort: (filters.sort ?? '-points') as CompetitionStandingsSort,
+    page: filters.page,
+    per_page: filters.perPage ?? 100,
   }
 }
 
@@ -383,6 +499,35 @@ export const CompetitionsGateway = {
       .map((item) => normalizeSeasonListItem(item, String(competitionId)))
       .filter((item): item is CompetitionSeasonListItem => Boolean(item))
     return normalized
+  },
+
+  async listGroups(filters: { competitionSeasonId: string | number; naipe?: CompetitionStandingsFilters['naipe'] }): Promise<CompetitionStandingGroupSummary[]> {
+    const api = await getApi()
+    const { data } = await api.get(GROUPS_PATH, {
+      params: {
+        competition_season_id: filters.competitionSeasonId,
+        naipe: filters.naipe,
+        per_page: 100,
+        sort: 'order',
+      },
+    })
+    const payload = (data ?? {}) as Record<string, unknown>
+    return extractArray(payload.data ?? payload)
+      .map((item) => normalizeStandingGroup(item))
+      .filter((item): item is CompetitionStandingGroupSummary => Boolean(item))
+  },
+
+  async listStandings(filters: CompetitionStandingsFilters): Promise<{ items: CompetitionStandingRow[]; meta: CompetitionListMeta }> {
+    const api = await getApi()
+    const { data } = await api.get(STANDINGS_PATH, {
+      params: buildStandingsParams(filters),
+    })
+    const payload = (data ?? {}) as Record<string, unknown>
+    const items = extractArray(payload.data ?? payload)
+      .map((item) => normalizeStandingRow(item))
+      .filter((item): item is CompetitionStandingRow => Boolean(item))
+    const meta = normalizeMeta((payload.meta ?? {}) as Record<string, unknown>)
+    return { items, meta }
   },
 
   async getSeason(seasonId: string | number): Promise<CompetitionSeason> {

@@ -267,6 +267,15 @@ export function CompetitionsPage({ currentUser }: { currentUser: AuthProfile }) 
                           <div className="flex justify-end gap-2">
                             <Button
                               size="sm"
+                              variant="outline"
+                              className="flex items-center gap-1"
+                              onClick={() => router.push(`/competitions/${competition.id}/standings`)}
+                            >
+                              <Trophy className="h-4 w-4" />
+                              Classificação
+                            </Button>
+                            <Button
+                              size="sm"
                               variant="secondary"
                               className="flex items-center gap-1"
                               onClick={() => router.push(`/competitions/${competition.id}/edit`)}

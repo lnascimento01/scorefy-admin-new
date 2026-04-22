@@ -2,84 +2,94 @@
 
 import { FormEvent, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Save, Trash2 } from 'lucide-react'
-import type { AuthProfile } from '@/services/auth.service'
-import { DashboardShell } from '@/modules/dashboard/components/DashboardShell'
-import { PageWrapper } from '@/components/layout/PageWrapper'
+import { Loader2, Trash2 } from 'lucide-react'
 import { AlertBanner } from '@/components/AlertBanner'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
 import { ConfirmModal } from '@/components/ConfirmModal'
-import type { TeamStatus } from '../types'
+import { PageWrapper } from '@/components/layout/PageWrapper'
+import { Button } from '@/components/ui/button'
+import { DashboardShell } from '@/modules/dashboard/components/DashboardShell'
+import type { AuthProfile } from '@/services/auth.service'
+import { TeamForm } from '../components/TeamForm'
+import { useTeamCatalogs } from '../hooks/useTeamCatalogs'
 import { useTeamEditor } from '../hooks/useTeamEditor'
+import type { TeamFormValues, TeamUpsertPayload } from '../types'
 
-const statusLabel: Record<TeamStatus, string> = {
-  active: 'Ativa',
-  inactive: 'Inativa',
-  draft: 'Em formação'
+function teamToFormValues(team: NonNullable<ReturnType<typeof useTeamEditor>['detail']>): TeamFormValues {
+  return {
+    name: team.name,
+    shortName: team.shortName ?? '',
+    slug: team.slug ?? '',
+    countryId: team.countryId ?? '',
+    city: team.city ?? '',
+    colors: team.colors ?? [],
+  }
 }
 
-export function TeamEditPage({ currentUser, teamId }: { currentUser: AuthProfile; teamId: string }) {
-  const router = useRouter()
-  const { detail, loading, saving, error, success, refetch, update, remove } = useTeamEditor(teamId)
+function formToPayload(form: TeamFormValues): TeamUpsertPayload {
+  return {
+    name: form.name.trim(),
+    shortName: form.shortName.trim() || null,
+    slug: form.slug.trim() || null,
+    countryId: form.countryId || null,
+    city: form.city.trim() || null,
+    colors: form.colors.length ? form.colors : null,
+  }
+}
+
+function TeamEditFormCard({
+  detail,
+  countries,
+  saving,
+  onSubmit,
+  onCancel,
+}: {
+  detail: NonNullable<ReturnType<typeof useTeamEditor>['detail']>
+  countries: ReturnType<typeof useTeamCatalogs>['countries']
+  saving: boolean
+  onSubmit: (payload: TeamUpsertPayload) => Promise<void>
+  onCancel: () => void
+}) {
+  const [form, setForm] = useState<TeamFormValues>(() => teamToFormValues(detail))
   const [localError, setLocalError] = useState<string | null>(null)
-  const [confirmOpen, setConfirmOpen] = useState(false)
 
-  const initial = useMemo(() => detail, [detail])
-  const [form, setForm] = useState(() => ({
-    name: '',
-    shortName: '',
-    city: '',
-    state: '',
-    country: '',
-    category: '',
-    gender: '',
-    coach: '',
-    status: 'active' as TeamStatus,
-    totalPlayers: '',
-    foundedAt: ''
-  }))
-
-  useMemo(() => {
-    if (!initial) return form
-    setForm({
-      name: initial.name,
-      shortName: initial.shortName ?? '',
-      city: initial.city ?? '',
-      state: initial.state ?? '',
-      country: initial.country ?? '',
-      category: initial.category ?? '',
-      gender: initial.gender ?? '',
-      coach: initial.coach ?? '',
-      status: initial.status,
-      totalPlayers: initial.totalPlayers?.toString() ?? '',
-      foundedAt: initial.foundedAt ?? ''
-    })
-    return form
-  }, [initial])
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setLocalError(null)
+
     if (!form.name.trim()) {
       setLocalError('Nome é obrigatório.')
       return
     }
-    await update({
-      name: form.name,
-      shortName: form.shortName || undefined,
-      city: form.city || undefined,
-      state: form.state || undefined,
-      country: form.country || undefined,
-      category: form.category || undefined,
-      gender: form.gender || undefined,
-      coach: form.coach || undefined,
-      status: form.status,
-      totalPlayers: form.totalPlayers ? Number(form.totalPlayers) : undefined,
-      foundedAt: form.foundedAt || undefined
-    })
+
+    await onSubmit(formToPayload(form))
   }
+
+  return (
+    <div className="space-y-2">
+      {localError && <AlertBanner variant="warning" message={localError} />}
+      <TeamForm
+        value={form}
+        onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
+        onSubmit={handleSubmit}
+        onCancel={onCancel}
+        submitting={saving}
+        submitLabel={saving ? 'Salvando...' : 'Salvar equipe'}
+        countries={countries}
+      />
+    </div>
+  )
+}
+
+export function TeamEditPage({ currentUser, teamId }: { currentUser: AuthProfile; teamId: string }) {
+  const router = useRouter()
+  const { countries, loading: loadingCatalogs, error: catalogError, refetch: refetchCatalogs } = useTeamCatalogs()
+  const { detail, loading, saving, error, success, update, remove, refetch, setError } = useTeamEditor(teamId)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const formKey = useMemo(() => {
+    if (!detail) return teamId
+    return `${detail.id}:${detail.updatedAt ?? 'static'}`
+  }, [detail, teamId])
 
   if (loading || !detail) {
     return (
@@ -95,112 +105,74 @@ export function TeamEditPage({ currentUser, teamId }: { currentUser: AuthProfile
   }
 
   return (
-    <DashboardShell userName={currentUser.name} userEmail={currentUser.email} onRefresh={refetch} refreshing={saving}>
+    <DashboardShell
+      userName={currentUser.name}
+      userEmail={currentUser.email}
+      onRefresh={() => {
+        refetch()
+        refetchCatalogs()
+      }}
+      refreshing={saving || loadingCatalogs}
+    >
       <PageWrapper
         title={`Editar equipe • ${detail.name}`}
-        description="Atualize informações básicas. Remova somente se tiver certeza."
+        description="Ajuste apenas os campos realmente aceitos pelo backend de teams."
         actions={
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => router.push('/teams')}>
               Voltar
             </Button>
-            <Button variant="ghost" size="sm" className="text-primary" onClick={() => setConfirmOpen(true)} disabled={saving}>
+            <Button variant="ghost" size="sm" className="text-primary gap-2" onClick={() => setConfirmOpen(true)} disabled={saving}>
               <Trash2 className="h-4 w-4" />
-              Remover
+              Excluir
             </Button>
           </div>
         }
       >
-        <form className="card space-y-5 p-6" onSubmit={handleSubmit}>
-          {(error || localError || success) && (
-            <AlertBanner
-              variant={error || localError ? 'error' : 'success'}
-              message={localError ?? error ?? undefined}
-              title={success ?? undefined}
-            />
-          )}
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-1 text-sm">
-              <span className="text-textSecondary">Nome</span>
-              <Input value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} required />
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-textSecondary">Abreviação</span>
-              <Input value={form.shortName} onChange={(e) => setForm((prev) => ({ ...prev, shortName: e.target.value }))} />
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-textSecondary">Cidade</span>
-              <Input value={form.city} onChange={(e) => setForm((prev) => ({ ...prev, city: e.target.value }))} />
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-textSecondary">Estado</span>
-              <Input value={form.state} onChange={(e) => setForm((prev) => ({ ...prev, state: e.target.value }))} />
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-textSecondary">País</span>
-              <Input value={form.country} onChange={(e) => setForm((prev) => ({ ...prev, country: e.target.value }))} />
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-textSecondary">Categoria</span>
-              <Input value={form.category} onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))} />
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-textSecondary">Gênero</span>
-              <Input value={form.gender} onChange={(e) => setForm((prev) => ({ ...prev, gender: e.target.value }))} />
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-textSecondary">Técnico</span>
-              <Input value={form.coach} onChange={(e) => setForm((prev) => ({ ...prev, coach: e.target.value }))} />
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-textSecondary">Status</span>
-              <Select
-                value={form.status}
-                onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value as TeamStatus }))}
-              >
-                <option value="active">Ativa</option>
-                <option value="draft">Em formação</option>
-                <option value="inactive">Inativa</option>
-              </Select>
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-textSecondary">Total de atletas</span>
-              <Input
-                type="number"
-                value={form.totalPlayers}
-                onChange={(e) => setForm((prev) => ({ ...prev, totalPlayers: e.target.value }))}
-                min={0}
-              />
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-textSecondary">Fundação (ISO)</span>
-              <Input value={form.foundedAt} onChange={(e) => setForm((prev) => ({ ...prev, foundedAt: e.target.value }))} />
-            </label>
+        {(error || success || catalogError) && (
+          <div className="space-y-2">
+            {error && <AlertBanner variant="warning" message={error} />}
+            {success && <AlertBanner variant="success" message={success} />}
+            {catalogError && <AlertBanner variant="warning" message={catalogError} />}
           </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="ghost" onClick={() => router.push('/teams')}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={saving} className="gap-2">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {saving ? 'Salvando...' : 'Salvar'}
-            </Button>
+        )}
+
+        {loadingCatalogs ? (
+          <div className="flex items-center gap-3 rounded-2xl border border-borderSoft bg-surface-muted px-4 py-3 text-textSecondary">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Carregando catálogos do formulário...</span>
           </div>
-        </form>
+        ) : (
+          <TeamEditFormCard
+            key={formKey}
+            detail={detail}
+            countries={countries}
+            saving={saving}
+            onSubmit={async (payload) => {
+              await update(payload)
+            }}
+            onCancel={() => router.push('/teams')}
+          />
+        )}
       </PageWrapper>
 
       <ConfirmModal
         open={confirmOpen}
-        title="Confirmar remoção"
-        description={`A equipe "${detail.name}" será removida. Deseja continuar?`}
-        onCancel={() => setConfirmOpen(false)}
+        title="Confirmar exclusão"
+        description={`A equipe "${detail.name}" só será removida se não houver vínculos ativos com atletas, partidas, grupos, inscrições sazonais, comissão ou notícias.`}
+        confirmLabel={saving ? 'Excluindo...' : 'Excluir equipe'}
+        onCancel={() => {
+          if (!saving) {
+            setConfirmOpen(false)
+            setError(null)
+          }
+        }}
         onConfirm={() => {
-          setConfirmOpen(false)
-          remove()
-            .then(() => {
+          remove().then((removed) => {
+            if (removed) {
               router.push('/teams')
-            })
-            .catch(() => undefined)
+            }
+          })
         }}
       />
     </DashboardShell>

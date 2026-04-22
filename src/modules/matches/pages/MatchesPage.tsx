@@ -4,18 +4,30 @@ import { useCallback, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { AuthProfile } from '@/services/auth.service'
 import { DashboardShell } from '@/modules/dashboard/components/DashboardShell'
-import { MatchesFilters } from '../components/MatchesFilters'
-import { MatchesTable } from '../components/MatchesTable'
 import { PaginationControls } from '@/components/PaginationControls'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { AlertBanner } from '@/components/AlertBanner'
 import { Button } from '@/components/ui/button'
+import { downloadBase64File } from '@/modules/match-control/utils/files'
+import { ScoresheetGateway } from '@/modules/match-control/services/scoresheet.service'
+import { MatchesFilters } from '../components/MatchesFilters'
+import { MatchesTable } from '../components/MatchesTable'
 import { useMatches } from '../hooks/useMatches'
 import { MatchesGateway } from '../services/matches.service'
 import type { MatchSummary } from '../types'
 import { resolveMatchActionError } from '../utils/errors'
+import type { MatchTransitionAction } from '../utils/status'
 
 const MATCH_CONTROL_BASE_PATH = (process.env.NEXT_PUBLIC_MATCH_CONTROL_BASE_PATH ?? '/matches').replace(/\/$/, '')
+
+type ListActionState = { matchId: string; action: MatchTransitionAction | 'scoresheet' } | null
+
+const actionFallbackMessages: Record<MatchTransitionAction, string> = {
+  start: 'Não foi possível iniciar a partida. Verifique o status e tente novamente.',
+  pause: 'Não foi possível pausar a partida. Verifique o status e tente novamente.',
+  resume: 'Não foi possível retomar a partida. Verifique o status e tente novamente.',
+  startNextPeriod: 'Não foi possível iniciar o segundo tempo. Verifique o status e tente novamente.'
+}
 
 export function MatchesPage({ currentUser }: { currentUser: AuthProfile }) {
   const {
@@ -36,7 +48,7 @@ export function MatchesPage({ currentUser }: { currentUser: AuthProfile }) {
 
   const router = useRouter()
   const [searchValue, setSearchValue] = useState(filters.search ?? '')
-  const [actionMatchId, setActionMatchId] = useState<string | null>(null)
+  const [actionState, setActionState] = useState<ListActionState>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
   const competitionOptions = useMemo(() => {
@@ -50,31 +62,62 @@ export function MatchesPage({ currentUser }: { currentUser: AuthProfile }) {
     return Array.from(map.entries()).map(([value, label]) => ({ value, label }))
   }, [matches])
 
-  const handleStartMatch = useCallback(
+  const handleTransitionAction = useCallback(
+    async (match: MatchSummary, action: MatchTransitionAction) => {
+      setActionError(null)
+      const id = String(match.id)
+      setActionState({ matchId: id, action })
+      try {
+        if (action === 'start') {
+          await MatchesGateway.start(id)
+        } else if (action === 'pause') {
+          await MatchesGateway.pause(id)
+        } else if (action === 'resume') {
+          await MatchesGateway.resume(id)
+        } else if (action === 'startNextPeriod') {
+          await MatchesGateway.startSecondHalf(id)
+        }
+      } catch (err) {
+        console.error(`Failed to execute ${action} for match ${id}`, err)
+        setActionError(resolveMatchActionError(err, actionFallbackMessages[action]))
+      } finally {
+        await refetch()
+        setActionState(null)
+      }
+    },
+    [refetch]
+  )
+
+  const handleOpenEvents = useCallback(
+    (match: MatchSummary) => {
+      router.push(`${MATCH_CONTROL_BASE_PATH}/${match.id}/control`)
+    },
+    [router]
+  )
+
+  const handleOpenScoresheet = useCallback(
     async (match: MatchSummary) => {
       setActionError(null)
       const id = String(match.id)
-      setActionMatchId(id)
+      setActionState({ matchId: id, action: 'scoresheet' })
       try {
-        await MatchesGateway.start(id)
-        refetch()
-        router.push(`${MATCH_CONTROL_BASE_PATH}/${id}/control`)
+        const payload = await ScoresheetGateway.fetch(id)
+        downloadBase64File(payload.base64, payload.filename, payload.mime)
       } catch (err) {
-        console.error('Failed to start match', err)
-        setActionError(resolveMatchActionError(err, 'Não foi possível iniciar a partida. Verifique o status e tente novamente.'))
-        refetch()
+        console.error(`Failed to fetch scoresheet for match ${id}`, err)
+        setActionError(resolveMatchActionError(err, 'Não foi possível gerar a súmula da partida.'))
       } finally {
-        setActionMatchId(null)
+        setActionState(null)
       }
     },
-    [refetch, router]
+    []
   )
 
   const handleEditMatch = useCallback(
     (match: MatchSummary) => {
       router.push(`/matches/${match.id}/edit`)
     },
-    [router],
+    [router]
   )
 
   return (
@@ -82,11 +125,7 @@ export function MatchesPage({ currentUser }: { currentUser: AuthProfile }) {
       <PageWrapper
         title="Gestão de partidas"
         description="Controle o fluxo completo das partidas de handebol: agendamento, tempo real e finalização."
-        actions={
-          <Button onClick={() => router.push('/matches/create')}>
-            Nova partida
-          </Button>
-        }
+        actions={<Button onClick={() => router.push('/matches/create')}>Nova partida</Button>}
       >
         <div className="space-y-4">
           {error && <AlertBanner variant="warning" message={error} />}
@@ -112,9 +151,11 @@ export function MatchesPage({ currentUser }: { currentUser: AuthProfile }) {
         <MatchesTable
           matches={matches}
           loading={loading}
-          onStart={handleStartMatch}
+          onTransitionAction={handleTransitionAction}
+          onOpenEvents={handleOpenEvents}
+          onOpenScoresheet={handleOpenScoresheet}
           onEdit={handleEditMatch}
-          actionMatchId={actionMatchId}
+          actionState={actionState}
         />
 
         <PaginationControls

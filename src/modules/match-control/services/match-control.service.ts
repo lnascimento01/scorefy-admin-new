@@ -66,7 +66,7 @@ export const MatchControlGateway = {
     return this.performAction(matchId, 'start')
   },
 
-  async pause(matchId: string | number, payload?: { reason: string }): Promise<MatchControlSnapshot | null> {
+  async pause(matchId: string | number, payload?: { reason?: string }): Promise<MatchControlSnapshot | null> {
     return this.performAction(matchId, 'pause', payload)
   },
 

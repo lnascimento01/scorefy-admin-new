@@ -1,9 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import type { TeamSummary } from '../types'
-import { TeamsGateway } from '../services/teams.service'
 import { resolveMatchActionError } from '@/modules/matches/utils/errors'
+import { TeamsGateway } from '../services/teams.service'
+import type { TeamSummary, TeamUpsertPayload } from '../types'
 
 export function useTeamEditor(teamId: string) {
   const [detail, setDetail] = useState<TeamSummary | null>(null)
@@ -18,16 +18,15 @@ export function useTeamEditor(teamId: string) {
     try {
       const data = await TeamsGateway.getById(teamId)
       setDetail(data)
-    } catch (err) {
-      const message = resolveMatchActionError(err, 'Não foi possível carregar a equipe.')
-      setError(message)
+    } catch (error) {
+      setError(resolveMatchActionError(error, 'Não foi possível carregar a equipe.'))
     } finally {
       setLoading(false)
     }
   }, [teamId])
 
   const update = useCallback(
-    async (payload: Partial<TeamSummary>) => {
+    async (payload: TeamUpsertPayload) => {
       setSaving(true)
       setError(null)
       setSuccess(null)
@@ -36,9 +35,8 @@ export function useTeamEditor(teamId: string) {
         setDetail(updated)
         setSuccess('Equipe atualizada com sucesso.')
         return updated
-      } catch (err) {
-        const message = resolveMatchActionError(err, 'Não foi possível atualizar a equipe.')
-        setError(message)
+      } catch (error) {
+        setError(resolveMatchActionError(error, 'Não foi possível atualizar a equipe.'))
         return null
       } finally {
         setSaving(false)
@@ -50,11 +48,14 @@ export function useTeamEditor(teamId: string) {
   const remove = useCallback(async () => {
     setSaving(true)
     setError(null)
+    setSuccess(null)
     try {
       await TeamsGateway.remove(teamId)
-      setSuccess('Equipe removida.')
-    } catch (err) {
-      setError(resolveMatchActionError(err, 'Não foi possível remover a equipe.'))
+      setSuccess('Equipe removida com sucesso.')
+      return true
+    } catch (error) {
+      setError(resolveMatchActionError(error, 'Não foi possível remover a equipe.'))
+      return false
     } finally {
       setSaving(false)
     }
@@ -73,6 +74,7 @@ export function useTeamEditor(teamId: string) {
     refetch: () => fetchDetail().catch(() => undefined),
     update,
     remove,
-    setDetail,
+    setError,
+    setSuccess,
   }
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { getApi } from '@/services/api'
+import { resolveMatchActionError } from '@/modules/matches/utils/errors'
 
 export type MatchControlAction =
   | 'start'
@@ -22,6 +23,16 @@ const actionPath: Record<MatchControlAction, string> = {
   startNextPeriod: 'second-half',
   cancel: 'cancel',
   adjustTime: 'adjust-time'
+}
+
+const fallbackMessages: Record<MatchControlAction, string> = {
+  start: 'Não foi possível iniciar a partida.',
+  pause: 'Não foi possível pausar a partida.',
+  resume: 'Não foi possível retomar a partida.',
+  finish: 'Não foi possível encerrar a partida.',
+  startNextPeriod: 'Não foi possível iniciar o próximo período.',
+  cancel: 'Não foi possível cancelar a partida.',
+  adjustTime: 'Não foi possível ajustar o cronômetro.'
 }
 
 async function ensureMatchId(matchId: string | number): Promise<string> {
@@ -45,7 +56,7 @@ export function useMatchActions() {
       await api.post(`${MATCHES_PATH}/${id}/${actionPath[action]}`, body)
       setMessage('Ação enviada. Aguardando sincronização do relógio.')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível executar a ação.')
+      setError(resolveMatchActionError(err, fallbackMessages[action]))
       throw err
     } finally {
       setLoadingAction(null)

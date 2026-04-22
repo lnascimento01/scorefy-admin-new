@@ -1,8 +1,9 @@
-import { getApi } from '@/services/api'
 import { extractArray } from '@/modules/dashboard/utils/normalizers'
-import type { TeamListMeta, TeamStatus, TeamSummary } from '../types'
+import { getApi } from '@/services/api'
+import type { TeamCountry, TeamListMeta, TeamSummary, TeamUpsertPayload } from '../types'
 
 const TEAMS_PATH = (process.env.NEXT_PUBLIC_TEAMS_PATH ?? '/v1/auth/teams').replace(/\/$/, '')
+const COUNTRIES_PATH = (process.env.NEXT_PUBLIC_COUNTRIES_PATH ?? '/v1/auth/countries').replace(/\/$/, '')
 
 function asString(value: unknown) {
   if (typeof value === 'string') {
@@ -22,6 +23,10 @@ function asNumber(value: unknown) {
   return null
 }
 
+function asObject(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
+}
+
 function normalizeMeta(meta: Record<string, unknown> | undefined): TeamListMeta {
   const currentPage = asNumber(meta?.current_page) ?? asNumber(meta?.currentPage) ?? 1
   const lastPage = asNumber(meta?.last_page) ?? asNumber(meta?.lastPage) ?? currentPage
@@ -30,66 +35,101 @@ function normalizeMeta(meta: Record<string, unknown> | undefined): TeamListMeta 
   return { currentPage, lastPage, perPage, total }
 }
 
-function normalizeTeam(item: Record<string, unknown>): TeamSummary | null {
+function normalizeCountry(raw: unknown): TeamCountry | null {
+  const item = asObject(raw)
+  if (!item) return null
+
   const id = asString(item.id)
   const name = asString(item.name)
   if (!id || !name) return null
-  const shortName = asString(item.short_name ?? item.shortName) ?? undefined
-  const city = asString(item.city) ?? undefined
-  const state = asString(item.state) ?? undefined
-  const country = asString(item.country) ?? undefined
-  const category = asString(item.category) ?? undefined
-  const gender = asString(item.gender) ?? undefined
-  const coach = asString(item.coach) ?? undefined
-  const totalPlayers = asNumber(item.total_players ?? item.totalPlayers) ?? undefined
-  const updatedAt = asString(item.updated_at ?? item.updatedAt) ?? undefined
-  const foundedAt = asString(item.founded_at ?? item.foundedAt) ?? undefined
-  const status = (asString(item.status) as TeamStatus) ?? 'active'
 
   return {
     id,
     name,
-    shortName,
-    city,
-    state,
-    country,
-    category,
-    gender,
-    coach,
-    totalPlayers,
-    updatedAt,
-    foundedAt,
-    status
+    code: asString(item.code) ?? undefined,
+  }
+}
+
+function normalizeColors(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw.map((entry) => asString(entry)).filter((entry): entry is string => Boolean(entry)).slice(0, 5)
+  }
+
+  const item = asObject(raw)
+  if (!item) return []
+
+  return Object.values(item)
+    .map((entry) => asString(entry))
+    .filter((entry): entry is string => Boolean(entry))
+    .slice(0, 5)
+}
+
+function normalizeTeam(item: Record<string, unknown>): TeamSummary | null {
+  const id = asString(item.id)
+  const name = asString(item.name)
+  if (!id || !name) return null
+
+  return {
+    id,
+    name,
+    shortName: asString(item.short_name ?? item.shortName) ?? undefined,
+    slug: asString(item.slug) ?? undefined,
+    countryId: asString(item.country_id ?? item.countryId) ?? undefined,
+    country: normalizeCountry(item.country),
+    city: asString(item.city) ?? undefined,
+    colors: normalizeColors(item.colors),
+    meta: asObject(item.meta) ?? undefined,
+    createdAt: asString(item.created_at ?? item.createdAt) ?? undefined,
+    updatedAt: asString(item.updated_at ?? item.updatedAt) ?? undefined,
+  }
+}
+
+function toApiPayload(payload: TeamUpsertPayload) {
+  return {
+    name: payload.name,
+    short_name: payload.shortName ?? undefined,
+    slug: payload.slug ?? undefined,
+    country_id: payload.countryId ? Number(payload.countryId) : payload.countryId === null ? null : undefined,
+    city: payload.city ?? undefined,
+    colors: payload.colors?.length ? payload.colors : payload.colors === null ? null : undefined,
   }
 }
 
 export interface TeamListResult {
   items: TeamSummary[]
   meta: TeamListMeta
-  error?: string
-  source: 'api' | 'mock'
+  source: 'api'
 }
 
 export const TeamsGateway = {
-  async list(params: { page?: number; perPage?: number; search?: string; status?: TeamStatus | 'all'; category?: string; gender?: string } = {}): Promise<TeamListResult> {
+  async list(params: {
+    page?: number
+    perPage?: number
+    search?: string
+    countryId?: string
+    sort?: 'name' | '-name' | 'created_at' | '-created_at'
+  } = {}): Promise<TeamListResult> {
     const api = await getApi()
     const { data } = await api.get(TEAMS_PATH, {
       params: {
         page: params.page,
         per_page: params.perPage,
-        search: params.search,
-        status: params.status && params.status !== 'all' ? params.status : undefined,
-        category: params.category,
-        gender: params.gender
-      }
+        q: params.search || undefined,
+        country_id: params.countryId || undefined,
+        sort: params.sort || undefined,
+      },
     })
-    const payload = data ?? data?.data
-    const candidates = extractArray(payload?.data ?? payload?.teams ?? payload)
-    const items = candidates
+
+    const payload = (data ?? {}) as Record<string, unknown>
+    const items = extractArray(payload.data ?? payload)
       .map((item) => (item && typeof item === 'object' ? normalizeTeam(item as Record<string, unknown>) : null))
       .filter((item): item is TeamSummary => Boolean(item))
-    const meta = normalizeMeta((payload?.meta ?? {}) as Record<string, unknown>)
-    return { items, meta, source: 'api' }
+
+    return {
+      items,
+      meta: normalizeMeta((payload.meta ?? {}) as Record<string, unknown>),
+      source: 'api',
+    }
   },
 
   async getById(id: string | number): Promise<TeamSummary> {
@@ -102,30 +142,39 @@ export const TeamsGateway = {
     return detail
   },
 
-  async update(id: string | number, payload: Partial<TeamSummary>): Promise<TeamSummary> {
+  async create(payload: TeamUpsertPayload): Promise<TeamSummary> {
     const api = await getApi()
-    const { data } = await api.patch(`${TEAMS_PATH}/${id}`, {
-      name: payload.name,
-      short_name: payload.shortName,
-      city: payload.city,
-      state: payload.state,
-      country: payload.country,
-      category: payload.category,
-      gender: payload.gender,
-      coach: payload.coach,
-      status: payload.status,
-      total_players: payload.totalPlayers,
-      founded_at: payload.foundedAt
-    })
-    const detail = normalizeTeam((data?.data ?? data) as Record<string, unknown>)
-    if (!detail) {
-      throw new Error('Não foi possível atualizar equipe.')
+    const { data } = await api.post(TEAMS_PATH, toApiPayload(payload))
+    const created = normalizeTeam((data?.data ?? data) as Record<string, unknown>)
+    if (!created) {
+      throw new Error('Não foi possível criar a equipe.')
     }
-    return detail
+    return created
+  },
+
+  async update(id: string | number, payload: TeamUpsertPayload): Promise<TeamSummary> {
+    const api = await getApi()
+    const { data } = await api.patch(`${TEAMS_PATH}/${id}`, toApiPayload(payload))
+    const updated = normalizeTeam((data?.data ?? data) as Record<string, unknown>)
+    if (!updated) {
+      throw new Error('Não foi possível atualizar a equipe.')
+    }
+    return updated
   },
 
   async remove(id: string | number): Promise<void> {
     const api = await getApi()
     await api.delete(`${TEAMS_PATH}/${id}`)
-  }
+  },
+
+  async listCountries(): Promise<TeamCountry[]> {
+    const api = await getApi()
+    const { data } = await api.get(COUNTRIES_PATH, {
+      params: { per_page: 100, sort: 'name' },
+    })
+    const payload = (data ?? {}) as Record<string, unknown>
+    return extractArray(payload.data ?? payload)
+      .map((item) => normalizeCountry(item))
+      .filter((item): item is TeamCountry => Boolean(item))
+  },
 }

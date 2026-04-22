@@ -69,12 +69,12 @@ export function MatchesFilters({
         <Select value={statusValue} onChange={(event) => onStatusChange(event.target.value as MatchStatus | 'all')}>
           <option value="all">Todos status</option>
           <option value="scheduled">Agendadas</option>
-          <option value="not_started">Não iniciadas</option>
           <option value="live">Ao vivo</option>
           <option value="paused">Pausadas</option>
           <option value="halftime">Intervalo</option>
           <option value="finished">Finalizadas</option>
-          <option value="canceled">Canceladas</option>
+          <option value="postponed">Adiadas</option>
+          <option value="cancelled">Canceladas</option>
         </Select>
         <Input type="date" value={dateValue ?? ''} onChange={(event) => onDateChange(event.target.value)} />
       </div>

@@ -89,8 +89,10 @@ export const translations = {
         live: 'Ao vivo',
         paused: 'Pausada',
         halftime: 'Intervalo',
+        postponed: 'Adiada',
         final: 'Finalizada',
         finished: 'Finalizada',
+        cancelled: 'Cancelada',
         canceled: 'Cancelada'
       },
       alerts: {
@@ -323,8 +325,10 @@ export const translations = {
         live: 'Live',
         paused: 'Paused',
         halftime: 'Halftime',
+        postponed: 'Postponed',
         final: 'Finished',
         finished: 'Finished',
+        cancelled: 'Cancelled',
         canceled: 'Canceled'
       },
       alerts: {
@@ -557,8 +561,10 @@ export const translations = {
         live: 'En vivo',
         paused: 'Pausado',
         halftime: 'Descanso',
+        postponed: 'Aplazado',
         final: 'Finalizado',
         finished: 'Finalizado',
+        cancelled: 'Cancelado',
         canceled: 'Cancelado'
       },
       alerts: {

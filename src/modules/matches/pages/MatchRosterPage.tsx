@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useMatchRosterEditor } from '../hooks/useMatchRosterEditor'
 import type { MatchControlParticipant } from '@/modules/match-control/types'
-import type { MatchStatus } from '../types'
+import { formatMatchStatusLabel } from '../utils/status'
 
 function formatDateLabel(timestamp?: string | null) {
   if (!timestamp) return '—'
@@ -25,17 +25,6 @@ function formatDateLabel(timestamp?: string | null) {
   } catch {
     return '—'
   }
-}
-
-const statusLabel: Record<MatchStatus, string> = {
-  scheduled: 'Agendada',
-  not_started: 'Não iniciada',
-  live: 'Ao vivo',
-  paused: 'Pausada',
-  halftime: 'Intervalo',
-  final: 'Finalizada',
-  finished: 'Finalizada',
-  canceled: 'Cancelada'
 }
 
 function ParticipantRow({
@@ -164,7 +153,7 @@ export function MatchRosterPage({ currentUser, matchId }: { currentUser: AuthPro
     { label: 'Competição', value: detail.competitionName ?? '—' },
     { label: 'Local', value: detail.venueName ?? 'Local indefinido' },
     { label: 'Início previsto', value: startLabel },
-    { label: 'Status', value: statusLabel[detail.status as MatchStatus] ?? detail.status }
+    { label: 'Status', value: formatMatchStatusLabel(detail.status) }
   ]
 
   return (

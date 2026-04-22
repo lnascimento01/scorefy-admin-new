@@ -1,32 +1,26 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { resolveMatchActionError } from '@/modules/matches/utils/errors'
 import { TeamsGateway } from '../services/teams.service'
-import type { TeamSummary, TeamListMeta, TeamStatus } from '../types'
+import type { TeamFilters, TeamListMeta, TeamSummary } from '../types'
 
 const DEFAULT_META: TeamListMeta = { currentPage: 1, lastPage: 1, perPage: 10, total: 0 }
+
+const DEFAULT_FILTERS: TeamFilters = {
+  search: '',
+  countryId: '',
+  sort: 'name',
+  page: 1,
+  perPage: 10,
+}
 
 export function useTeams() {
   const [teams, setTeams] = useState<TeamSummary[]>([])
   const [meta, setMeta] = useState<TeamListMeta>(DEFAULT_META)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [source, setSource] = useState<'api' | 'mock'>('api')
-  const [filters, setFilters] = useState<{
-    status: TeamStatus | 'all'
-    category: string | 'all'
-    gender: string | 'all'
-    search: string
-    page: number
-    perPage: number
-  }>({
-    status: 'all',
-    category: 'all',
-    gender: 'all',
-    search: '',
-    page: 1,
-    perPage: 10
-  })
+  const [filters, setFilters] = useState<TeamFilters>(DEFAULT_FILTERS)
 
   const fetchTeams = useCallback(async () => {
     setLoading(true)
@@ -36,16 +30,13 @@ export function useTeams() {
         page: filters.page,
         perPage: filters.perPage,
         search: filters.search,
-        status: filters.status,
-        category: filters.category === 'all' ? undefined : filters.category,
-        gender: filters.gender === 'all' ? undefined : filters.gender
+        countryId: filters.countryId || undefined,
+        sort: filters.sort,
       })
       setTeams(result.items)
       setMeta(result.meta)
-      setSource(result.source)
-    } catch (err) {
-      console.error('Failed to load teams', err)
-      setError('Não foi possível carregar as equipes.')
+    } catch (error) {
+      setError(resolveMatchActionError(error, 'Não foi possível carregar as equipes.'))
     } finally {
       setLoading(false)
     }
@@ -55,8 +46,12 @@ export function useTeams() {
     fetchTeams().catch(() => undefined)
   }, [fetchTeams])
 
-  const updateFilter = (patch: Partial<typeof filters>) => {
-    setFilters((prev) => ({ ...prev, ...patch, page: patch.page ?? 1 }))
+  function updateFilter(patch: Partial<TeamFilters>) {
+    setFilters((current) => ({
+      ...current,
+      ...patch,
+      page: patch.page ?? 1,
+    }))
   }
 
   return {
@@ -64,14 +59,12 @@ export function useTeams() {
     meta,
     loading,
     error,
-    source,
     filters,
-    setStatus: (status: TeamStatus | 'all') => updateFilter({ status }),
-    setCategory: (category: string | 'all') => updateFilter({ category }),
-    setGender: (gender: string | 'all') => updateFilter({ gender }),
     setSearch: (search: string) => updateFilter({ search }),
+    setCountryId: (countryId: string) => updateFilter({ countryId }),
+    setSort: (sort: TeamFilters['sort']) => updateFilter({ sort }),
     setPage: (page: number) => updateFilter({ page }),
     setPerPage: (perPage: number) => updateFilter({ perPage, page: 1 }),
-    refetch: () => fetchTeams().catch(() => undefined)
+    refetch: () => fetchTeams().catch(() => undefined),
   }
 }
