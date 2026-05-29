@@ -102,6 +102,7 @@ export function getMatchActionCapabilities(status?: string | MatchStatus | null)
 
   return {
     canonicalStatus,
+    canManageRoster: canonicalStatus !== 'finished' && canonicalStatus !== 'cancelled',
     canStart: canonicalStatus === 'scheduled',
     canPause: canonicalStatus === 'live',
     canResume: canonicalStatus === 'paused',

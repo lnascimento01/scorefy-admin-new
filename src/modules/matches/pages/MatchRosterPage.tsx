@@ -2,15 +2,27 @@
 
 import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Check, Loader2, RefreshCcw, RotateCcw, Users, Users2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Clock3,
+  Loader2,
+  RefreshCcw,
+  Search,
+  ShieldCheck,
+  UserMinus,
+  UserPlus
+} from 'lucide-react'
 import type { AuthProfile } from '@/services/auth.service'
 import { DashboardShell } from '@/modules/dashboard/components/DashboardShell'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { AlertBanner } from '@/components/AlertBanner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useMatchRosterEditor } from '../hooks/useMatchRosterEditor'
+import { Badge } from '@/components/ui/badge'
 import type { MatchControlParticipant } from '@/modules/match-control/types'
+import type { CompetitionSeasonTeamPlayerRegistration } from '@/modules/competitions/types'
+import { useMatchRosterEditor } from '../hooks/useMatchRosterEditor'
 import { formatMatchStatusLabel } from '../utils/status'
 
 function formatDateLabel(timestamp?: string | null) {
@@ -27,81 +39,252 @@ function formatDateLabel(timestamp?: string | null) {
   }
 }
 
-function ParticipantRow({
-  participant,
-  selectedForRemoval,
-  onToggle
-}: {
-  participant: MatchControlParticipant
-  selectedForRemoval: boolean
-  onToggle: (id: string) => void
-}) {
-  return (
-    <div className="flex items-center justify-between rounded-xl border border-borderSoft/60 bg-surface-muted px-3 py-2">
-      <div>
-        <p className="text-sm font-semibold text-textPrimary">{participant.name}</p>
-        <p className="text-[10px] uppercase tracking-wide text-textSecondary">
-          {participant.position ?? participant.role ?? 'Jogador'}
-        </p>
-      </div>
-      <div className="flex items-center gap-3">
-        {typeof participant.shirtNumber === 'number' && (
-          <span className="text-xs font-semibold text-textSecondary">#{participant.shirtNumber}</span>
-        )}
-        <Button
-          type="button"
-          variant={selectedForRemoval ? 'secondary' : 'outline'}
-          size="sm"
-          onClick={() => onToggle(participant.id)}
-          className="gap-2"
-        >
-          {selectedForRemoval ? <RotateCcw className="h-4 w-4" /> : <Users className="h-4 w-4" />}
-          {selectedForRemoval ? 'Recolocar' : 'Remover'}
-        </Button>
-      </div>
-    </div>
-  )
+function normalizeSearch(text: string) {
+  return text
+    .trim()
+    .toLocaleLowerCase('pt-BR')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
 }
 
-function RosterBlock({
+function matchesSearch(texts: Array<string | number | null | undefined>, query: string) {
+  const normalizedQuery = normalizeSearch(query)
+  if (!normalizedQuery) return true
+
+  const combined = texts
+    .filter((value): value is string | number => value !== null && value !== undefined)
+    .map((value) => String(value))
+    .join(' ')
+
+  return normalizeSearch(combined).includes(normalizedQuery)
+}
+
+function getEligibleLabel(player: CompetitionSeasonTeamPlayerRegistration) {
+  const baseName = player.player?.fullName || player.player?.nickname || `Atleta #${player.playerId}`
+  const parts = [baseName]
+  if (player.shirtNumber !== undefined && player.shirtNumber !== null) {
+    parts.push(`#${player.shirtNumber}`)
+  }
+  if (player.position) {
+    parts.push(player.position)
+  }
+  return parts.join(' • ')
+}
+
+function getRelatedLabel(participant: MatchControlParticipant) {
+  const parts = [participant.name]
+  if (typeof participant.shirtNumber === 'number') {
+    parts.push(`#${participant.shirtNumber}`)
+  }
+  if (participant.position) {
+    parts.push(participant.position)
+  } else if (participant.role) {
+    parts.push(participant.role)
+  }
+  return parts.join(' • ')
+}
+
+function rosterSort(left: { shirtNumber?: number; name: string }, right: { shirtNumber?: number; name: string }) {
+  const leftNumber = left.shirtNumber ?? Number.MAX_SAFE_INTEGER
+  const rightNumber = right.shirtNumber ?? Number.MAX_SAFE_INTEGER
+
+  if (leftNumber !== rightNumber) {
+    return leftNumber - rightNumber
+  }
+
+  return left.name.localeCompare(right.name, 'pt-BR')
+}
+
+function SideRosterCard({
   title,
-  participants,
-  removedIds,
-  onToggle
+  subtitle,
+  searchValue,
+  onSearchChange,
+  eligiblePlayers,
+  relatedPlayers,
+  addIds,
+  removeIds,
+  onToggleAdd,
+  onToggleRemove
 }: {
   title: string
-  participants: MatchControlParticipant[]
-  removedIds: Set<string>
-  onToggle: (id: string) => void
+  subtitle: string
+  searchValue: string
+  onSearchChange: (value: string) => void
+  eligiblePlayers: CompetitionSeasonTeamPlayerRegistration[]
+  relatedPlayers: MatchControlParticipant[]
+  addIds: string[]
+  removeIds: string[]
+  onToggleAdd: (id: string) => void
+  onToggleRemove: (id: string) => void
 }) {
-  const players = participants.filter((p) => !p.isStaff)
+  const relatedIdSet = new Set(relatedPlayers.map((participant) => participant.id))
+  const addIdSet = new Set(addIds)
+  const removeIdSet = new Set(removeIds)
+
+  const visibleEligiblePlayers = eligiblePlayers
+    .filter((player) => !relatedIdSet.has(player.playerId))
+    .filter((player) =>
+      matchesSearch(
+        [
+          player.player?.fullName,
+          player.player?.nickname,
+          player.player?.number !== undefined && player.player?.number !== null ? `#${player.player.number}` : null,
+          player.position,
+          player.player?.positionName
+        ],
+        searchValue
+      )
+    )
+
+  const visibleRelatedPlayers = relatedPlayers.filter((participant) =>
+    matchesSearch(
+      [
+        participant.name,
+        participant.nick,
+        participant.position,
+        participant.role,
+        participant.shirtNumber !== undefined ? `#${participant.shirtNumber}` : null
+      ],
+      searchValue
+    )
+  )
+
+  const pendingAdds = eligiblePlayers.filter((player) => addIdSet.has(player.playerId))
+  const pendingRemovals = relatedPlayers.filter((participant) => removeIdSet.has(participant.id))
+
   return (
-    <div className="card space-y-3 p-5">
-      <div className="flex items-center justify-between">
+    <section className="card space-y-4 p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-textPrimary">{title}</p>
-          <p className="text-xs text-textSecondary">Jogadores escalados para esta partida.</p>
+          <p className="text-base font-semibold text-textPrimary">{title}</p>
+          <p className="text-sm text-textSecondary">{subtitle}</p>
         </div>
-        <span className="rounded-full bg-surface-muted px-3 py-1 text-xs font-semibold text-textSecondary">
-          {players.length} atletas
-        </span>
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="info">{visibleEligiblePlayers.length} elegíveis</Badge>
+          <Badge variant="success">{visibleRelatedPlayers.length} relacionados</Badge>
+        </div>
       </div>
+
       <div className="space-y-2">
-        {players.map((participant) => (
-          <ParticipantRow
-            key={participant.id}
-            participant={participant}
-            selectedForRemoval={removedIds.has(participant.id)}
-            onToggle={onToggle}
+        <div className="flex items-center gap-2 rounded-xl border border-borderSoft/70 bg-surface-muted px-3 py-2">
+          <Search className="h-4 w-4 text-textSecondary" />
+          <Input
+            value={searchValue}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Filtrar por nome, camisa ou posição"
+            className="border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
           />
-        ))}
-        {!players.length && (
-          <div className="rounded-xl border border-dashed border-borderSoft p-4 text-sm text-textSecondary">
-            Nenhum atleta disponível.
-          </div>
-        )}
+        </div>
       </div>
-    </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <div className="space-y-3 rounded-2xl border border-borderSoft/70 bg-surface-muted p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold text-textPrimary">Elegíveis</p>
+              <p className="text-xs text-textSecondary">Jogadores inscritos e aptos para esta partida.</p>
+            </div>
+            <Badge variant="info">{visibleEligiblePlayers.length}</Badge>
+          </div>
+
+          <div className="space-y-2">
+            {visibleEligiblePlayers.map((player) => {
+              const pending = addIdSet.has(player.playerId)
+              return (
+                <div key={player.id} className="flex items-center justify-between gap-3 rounded-xl border border-borderSoft/60 bg-[var(--surface-elevated-strong)] px-3 py-2">
+                  <div>
+                    <p className="text-sm font-semibold text-textPrimary">{getEligibleLabel(player)}</p>
+                    <p className="text-[10px] uppercase tracking-wide text-textSecondary">
+                      {player.player?.isActive ? 'Ativo' : 'Inativo'} • {player.registrationStatus} • {player.eligibilityStatus}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant={pending ? 'secondary' : 'outline'}
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => onToggleAdd(player.playerId)}
+                  >
+                    {pending ? <CheckCircle2 className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+                    {pending ? 'A incluir' : 'Relacionar'}
+                  </Button>
+                </div>
+              )
+            })}
+
+            {!visibleEligiblePlayers.length && (
+              <div className="rounded-xl border border-dashed border-borderSoft p-4 text-sm text-textSecondary">
+                Nenhum atleta elegível encontrado para este time.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-3 rounded-2xl border border-borderSoft/70 bg-surface-muted p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold text-textPrimary">Relacionados</p>
+              <p className="text-xs text-textSecondary">Elenco já vinculado ao jogo e disponível para eventos.</p>
+            </div>
+            <Badge variant="success">{visibleRelatedPlayers.length}</Badge>
+          </div>
+
+          <div className="space-y-2">
+            {visibleRelatedPlayers
+              .slice()
+              .sort((left, right) => rosterSort({ name: left.name, shirtNumber: left.shirtNumber }, { name: right.name, shirtNumber: right.shirtNumber }))
+              .map((participant) => {
+                const pending = removeIdSet.has(participant.id)
+                return (
+                  <div key={participant.id} className="flex items-center justify-between gap-3 rounded-xl border border-borderSoft/60 bg-[var(--surface-elevated-strong)] px-3 py-2">
+                    <div>
+                      <p className="text-sm font-semibold text-textPrimary">{getRelatedLabel(participant)}</p>
+                      <p className="text-[10px] uppercase tracking-wide text-textSecondary">
+                        {participant.position ?? participant.role ?? 'Relacionamento atual'}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant={pending ? 'secondary' : 'outline'}
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => onToggleRemove(participant.id)}
+                    >
+                      {pending ? <UserPlus className="h-4 w-4" /> : <UserMinus className="h-4 w-4" />}
+                      {pending ? 'Reincluir' : 'Remover'}
+                    </Button>
+                  </div>
+                )
+              })}
+
+            {!visibleRelatedPlayers.length && (
+              <div className="rounded-xl border border-dashed border-borderSoft p-4 text-sm text-textSecondary">
+                Nenhum atleta relacionado ainda.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {(pendingAdds.length > 0 || pendingRemovals.length > 0) && (
+        <div className="rounded-2xl border border-borderSoft/70 bg-surface-muted p-4">
+          <p className="text-sm font-semibold text-textPrimary">Pendências deste lado</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {pendingAdds.map((player) => (
+              <Badge key={player.id} variant="info">
+                + {player.player?.fullName ?? player.player?.nickname ?? player.playerId}
+              </Badge>
+            ))}
+            {pendingRemovals.map((participant) => (
+              <Badge key={participant.id} variant="warning">
+                - {participant.name}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -113,142 +296,125 @@ export function MatchRosterPage({ currentUser, matchId }: { currentUser: AuthPro
     saving,
     error,
     success,
-    removedIds,
+    eligiblePlayers,
+    search,
     addIds,
-    addInput,
-    toggleRemoval,
-    addCandidate,
-    removeFromAdds,
-    setAddInput,
+    removeIds,
+    setSearch,
+    toggleAdd,
+    toggleRemove,
     refresh,
     submitChanges
   } = useMatchRosterEditor(matchId)
 
   const startLabel = formatDateLabel(detail?.startAt)
+  const canonicalStatus = detail?.status ?? 'scheduled'
+  const statusLabel = formatMatchStatusLabel(canonicalStatus)
+  const isLive = ['live', 'paused', 'halftime'].includes(String(canonicalStatus))
 
-  const removalCount = removedIds.size
-  const addCount = addIds.length
+  const currentRelated = useMemo(() => {
+    if (!detail) {
+      return { home: [] as MatchControlParticipant[], away: [] as MatchControlParticipant[] }
+    }
 
-  const hasChanges = removalCount > 0 || addCount > 0
+    return {
+      home: detail.participants.home.filter((participant) => !participant.isStaff),
+      away: detail.participants.away.filter((participant) => !participant.isStaff)
+    }
+  }, [detail])
 
-  const subtitle = useMemo(() => {
-    if (!detail) return 'Carregando partida...'
-    return `${detail.homeTeam.name} x ${detail.awayTeam.name} • ${startLabel}`
-  }, [detail, startLabel])
+  const hasChanges = addIds.length > 0 || removeIds.length > 0
 
   if (loading || !detail) {
     return (
       <DashboardShell userName={currentUser.name} userEmail={currentUser.email}>
-        <PageWrapper title="Editar elenco" description="Carregando dados da partida...">
+        <PageWrapper title="Gerenciar partida" description="Carregando dados da partida...">
           <div className="flex items-center gap-3 rounded-2xl border border-borderSoft bg-surface-muted px-4 py-3 text-textSecondary">
             <Loader2 className="h-5 w-5 animate-spin" />
-            <span>Sincronizando elenco da partida...</span>
+            <span>Sincronizando contexto da partida...</span>
           </div>
         </PageWrapper>
       </DashboardShell>
     )
   }
 
+  const subtitle = `${detail.homeTeam.name} x ${detail.awayTeam.name} • ${startLabel}`
+
   const matchMeta = [
     { label: 'Competição', value: detail.competitionName ?? '—' },
-    { label: 'Local', value: detail.venueName ?? 'Local indefinido' },
-    { label: 'Início previsto', value: startLabel },
-    { label: 'Status', value: formatMatchStatusLabel(detail.status) }
+    { label: 'Temporada', value: detail.competitionSeason ?? detail.competitionSeasonId ?? '—' },
+    { label: 'Status', value: statusLabel },
+    { label: 'Início previsto', value: startLabel }
   ]
 
   return (
     <DashboardShell userName={currentUser.name} userEmail={currentUser.email} onRefresh={refresh}>
       <PageWrapper
-        title="Editar elenco"
+        title="Gerenciar partida"
         description={subtitle}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" className="gap-2" onClick={() => router.push(`/matches/${matchId}/control`)}>
               <ArrowLeft className="h-4 w-4" />
-              Voltar ao painel
+              Ir ao painel
             </Button>
             <Button variant="outline" size="sm" className="gap-2" onClick={() => router.push(`/matches/${matchId}/edit`)}>
               Editar dados
             </Button>
             <Button variant="outline" size="sm" className="gap-2" onClick={() => router.push('/matches')}>
               <RefreshCcw className="h-4 w-4" />
-              Ir para listagem
+              Voltar à listagem
             </Button>
           </div>
         }
       >
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-4">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.9fr)]">
+          <div className="space-y-4">
             {(error || success) && (
               <AlertBanner variant={error ? 'error' : 'success'} message={error ?? undefined} title={success ?? undefined} />
             )}
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <RosterBlock
-                title={`Mandante • ${detail.homeTeam.name}`}
-                participants={detail.participants.home}
-                removedIds={removedIds}
-                onToggle={toggleRemoval}
-              />
-              <RosterBlock
-                title={`Visitante • ${detail.awayTeam.name}`}
-                participants={detail.participants.away}
-                removedIds={removedIds}
-                onToggle={toggleRemoval}
-              />
-            </div>
-
-            <div className="card space-y-4 p-5">
-              <p className="text-sm font-semibold text-textPrimary">Jogadores para re-incluir / adicionar</p>
-              <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                <Input
-                  placeholder="Informe IDs separados por vírgula ou um por vez"
-                  value={addInput}
-                  onChange={(event) => setAddInput(event.target.value)}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => {
-                    if (!addInput.trim()) return
-                    addInput
-                      .split(',')
-                      .map((part) => part.trim())
-                      .filter(Boolean)
-                      .forEach((id) => addCandidate(id))
-                  }}
-                  disabled={saving}
-                >
-                  <Check className="h-4 w-4" />
-                  Adicionar à mudança
-                </Button>
-              </div>
-              {addIds.length > 0 ? (
-                <div className="rounded-xl border border-borderSoft/70 bg-surface-muted p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-textSecondary">IDs a serem adicionados</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {addIds.map((id) => (
-                    <span
-                      key={id}
-                      className="inline-flex items-center gap-2 rounded-full bg-secondary/15 px-3 py-1 text-xs font-semibold text-secondary"
-                    >
-                      {id}
-                      <button type="button" onClick={() => removeFromAdds(id)} aria-label={`Remover ${id}`}>
-                        x
-                      </button>
-                    </span>
-                  ))}
+            {isLive && (
+              <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-emerald-100">
+                <Clock3 className="mt-0.5 h-5 w-5" />
+                <div>
+                  <p className="font-semibold">Entrada tardia liberada</p>
+                  <p className="text-sm text-emerald-50/80">
+                    Atletas elegíveis podem ser relacionados agora e passam a ficar disponíveis para eventos imediatamente.
+                  </p>
                 </div>
               </div>
-              ) : (
-                <p className="text-sm text-textSecondary">Nenhum jogador extra selecionado.</p>
-              )}
-            </div>
+            )}
+
+            <SideRosterCard
+              title={`Mandante • ${detail.homeTeam.name}`}
+              subtitle="Relacione o elenco inicial e ajuste entradas tardias antes ou durante o jogo."
+              searchValue={search.home}
+              onSearchChange={(value) => setSearch('home', value)}
+              eligiblePlayers={eligiblePlayers.home}
+              relatedPlayers={currentRelated.home}
+              addIds={addIds}
+              removeIds={removeIds}
+              onToggleAdd={toggleAdd}
+              onToggleRemove={toggleRemove}
+            />
+
+            <SideRosterCard
+              title={`Visitante • ${detail.awayTeam.name}`}
+              subtitle="A mesma regra vale para o outro lado da partida."
+              searchValue={search.away}
+              onSearchChange={(value) => setSearch('away', value)}
+              eligiblePlayers={eligiblePlayers.away}
+              relatedPlayers={currentRelated.away}
+              addIds={addIds}
+              removeIds={removeIds}
+              onToggleAdd={toggleAdd}
+              onToggleRemove={toggleRemove}
+            />
           </div>
 
           <div className="space-y-4">
-            <div className="card space-y-2 p-5">
+            <div className="card space-y-3 p-5">
               <p className="text-sm font-semibold text-textPrimary">Dados da partida</p>
               <ul className="space-y-2 text-sm text-textSecondary">
                 {matchMeta.map((item) => (
@@ -259,33 +425,33 @@ export function MatchRosterPage({ currentUser, matchId }: { currentUser: AuthPro
                 ))}
               </ul>
             </div>
+
             <div className="card space-y-3 p-5">
-              <p className="text-sm font-semibold text-textPrimary">Resumo das alterações</p>
+              <p className="text-sm font-semibold text-textPrimary">Resumo operacional</p>
               <ul className="space-y-2 text-sm text-textSecondary">
-                <li>• Remoções: {removalCount}</li>
-                <li>• Inclusões: {addCount}</li>
-                <li>• É enviado PATCH /matches/{matchId}/players com arrays atomizados.</li>
+                <li>• {currentRelated.home.length + currentRelated.away.length} atletas atualmente relacionados</li>
+                <li>• {addIds.length} atletas marcados para inclusão</li>
+                <li>• {removeIds.length} atletas marcados para remoção</li>
+                <li>• O backend bloqueia jogadores fora do time, fora da inscrição da temporada e não relacionados no evento</li>
               </ul>
-              <p className="text-xs text-textSecondary">
-                O backend valida mínimo de atletas e conflitos de time, retornando 422 com mensagem detalhada.
-              </p>
               <Button
                 type="button"
                 className="mt-2 w-full gap-2"
                 onClick={() => submitChanges().catch(() => undefined)}
                 disabled={!hasChanges || saving}
               >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users2 className="h-4 w-4" />}
-                {saving ? 'Salvando mudanças...' : 'Aplicar mudanças'}
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                {saving ? 'Salvando...' : 'Salvar relação da partida'}
               </Button>
-              {!hasChanges && <p className="text-xs text-textSecondary">Selecione quem remover ou IDs para adicionar.</p>}
+              {!hasChanges && <p className="text-xs text-textSecondary">Selecione atletas para incluir ou remover antes de salvar.</p>}
             </div>
+
             <div className="card space-y-2 p-5 text-sm text-textSecondary">
-              <p className="text-sm font-semibold text-textPrimary">Dicas</p>
+              <p className="text-sm font-semibold text-textPrimary">Fluxo seguro</p>
               <ul className="space-y-2">
-                <li>• Atletas marcados como Recolocar permanecem no elenco até enviar o PATCH.</li>
-                <li>• Para reverter, clique em Recolocar antes de salvar.</li>
-                <li>• IDs adicionados devem pertencer ao mandante ou visitante.</li>
+                <li>• Pré-jogo: ajuste a relação sem iniciar a partida.</li>
+                <li>• Durante o jogo: a inclusão tardia é permitida apenas para atletas elegíveis.</li>
+                <li>• Eventos: só aceitam atletas já relacionados no contexto da partida.</li>
               </ul>
             </div>
           </div>

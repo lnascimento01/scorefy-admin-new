@@ -33,6 +33,37 @@ function asNumber(value: unknown) {
   return null
 }
 
+function resolveScore(record: Record<string, unknown>, side: 'home' | 'away'): number | null {
+  const scoreRecord = (record.score as Record<string, unknown> | undefined) ?? undefined
+  const teamsRecord = (record.teams as Record<string, unknown> | undefined) ?? undefined
+  const nestedTeam = (side === 'home' ? teamsRecord?.home : teamsRecord?.away) as Record<string, unknown> | undefined
+
+  const candidates = side === 'home'
+    ? [
+        record.home_score,
+        record.homeScore,
+        record.score_home,
+        scoreRecord?.home,
+        scoreRecord?.homeScore,
+        nestedTeam?.score,
+      ]
+    : [
+        record.away_score,
+        record.awayScore,
+        record.score_away,
+        scoreRecord?.away,
+        scoreRecord?.awayScore,
+        nestedTeam?.score,
+      ]
+
+  for (const candidate of candidates) {
+    const parsed = asNumber(candidate)
+    if (typeof parsed === 'number') return parsed
+  }
+
+  return null
+}
+
 function formatDateTime(value: unknown) {
   const asStringValue = asString(value)
   if (!asStringValue) return { dateLabel: '—', timeLabel: '—' }
@@ -74,8 +105,8 @@ export function normalizeMatchSummary(payload: unknown): MatchSummary | null {
   )
   const competitionSeason = asString(competition.season ?? record.competition_season)
   const venue = asString((record.venue as Record<string, unknown> | undefined)?.name ?? record.venue_name)
-  const homeScore = asNumber(record.home_score ?? homeTeam?.score)
-  const awayScore = asNumber(record.away_score ?? awayTeam?.score)
+  const homeScore = resolveScore(record, 'home') ?? asNumber(homeTeam?.score)
+  const awayScore = resolveScore(record, 'away') ?? asNumber(awayTeam?.score)
   const metaSlug = asString((record.meta as Record<string, unknown> | undefined)?.slug)
 
   return {
@@ -136,16 +167,21 @@ export function normalizeMatchControlSnapshot(payload: unknown): MatchControlSna
     matchId,
     status,
     period: asNumber(record.period) ?? undefined,
+    statusLabel: asString(record.status_label ?? record.statusLabel) ?? undefined,
+    periodLabel: asString(record.period_label ?? record.periodLabel) ?? undefined,
+    showScore: typeof record.show_score === 'boolean' ? record.show_score : typeof record.showScore === 'boolean' ? record.showScore : undefined,
+    showClock: typeof record.show_clock === 'boolean' ? record.show_clock : typeof record.showClock === 'boolean' ? record.showClock : undefined,
     elapsedSeconds: asNumber(record.elapsed_seconds ?? record.elapsedSeconds) ?? 0,
     periodElapsedSeconds: asNumber(record.period_elapsed_seconds ?? record.periodElapsedSeconds) ?? undefined,
     serverTime: asString(record.server_time ?? record.serverTime) ?? undefined,
     startTime: asString(record.start_time ?? record.startTime) ?? undefined,
     lastPauseAt: asString(record.last_pause_started_at ?? record.lastPauseStartedAt) ?? undefined,
     lastEventAt: asString(record.last_event_at ?? record.lastEventAt) ?? undefined,
+    timeoutRemainingSeconds: asNumber(record.timeout_remaining_seconds ?? record.timeoutRemainingSeconds) ?? undefined,
     maxPeriodSeconds: asNumber(record.MAX_PERIOD_SECONDS ?? record.max_period_seconds ?? record.maxPeriodSeconds) ?? undefined,
     firstHalfEnd: asNumber(record.FIRST_HALF_END ?? record.first_half_end ?? record.firstHalfEnd) ?? undefined,
-    home: buildTeamSnapshot(homeTeam, 'Mandante', score.home ?? record.home_score),
-    away: buildTeamSnapshot(awayTeam, 'Visitante', score.away ?? record.away_score)
+    home: buildTeamSnapshot(homeTeam, 'Mandante', resolveScore(record, 'home') ?? score.home ?? record.home_score),
+    away: buildTeamSnapshot(awayTeam, 'Visitante', resolveScore(record, 'away') ?? score.away ?? record.away_score)
   }
 
   return snapshot

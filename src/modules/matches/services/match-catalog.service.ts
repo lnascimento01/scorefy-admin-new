@@ -1,5 +1,7 @@
 import { getApi } from '@/services/api'
 import { extractArray } from '@/modules/dashboard/utils/normalizers'
+import { SeasonRegistrationsGateway } from '@/modules/competitions/services/season-registrations.service'
+import type { CompetitionNaipe, CompetitionSeasonTeamRegistration } from '@/modules/competitions/types'
 
 export interface CatalogOption {
   id: string
@@ -8,6 +10,7 @@ export interface CatalogOption {
   shortName?: string
   competitionId?: string
   season?: string
+  availableNaipes?: CompetitionNaipe[]
   metadata?: Record<string, unknown>
 }
 
@@ -57,16 +60,24 @@ function normalizeTeamOption(raw: Record<string, unknown>): CatalogOption | null
 }
 
 function normalizeSeasonOption(raw: Record<string, unknown>): CatalogOption | null {
-  const id = asString(raw.id)
-  const name = asString(raw.name)
-  const season = asString(raw.season)
-  if (!id || !name || !season) return null
+  const id = asString(raw.id ?? raw.competition_season_id ?? raw.season_id ?? raw.seasonId)
+  const label =
+    asString(raw.label) ??
+    asString(raw.name) ??
+    asString(raw.season) ??
+    asString(raw.season_code ?? raw.seasonCode) ??
+    asString(raw.reference_year_start ?? raw.referenceYearStart)
+  const season = asString(raw.season ?? raw.season_code ?? raw.seasonCode ?? raw.reference_year_start ?? raw.referenceYearStart)
+  if (!id || !label) return null
   return {
     id,
-    label: `${name} • ${season}`,
+    label,
     helper: season ?? undefined,
     season: season ?? undefined,
     competitionId: asString(raw.competition_id ?? raw.competitionId) ?? undefined,
+    availableNaipes: extractArray(raw.available_naipes ?? raw.availableNaipes)
+      .map((item) => asString(item) as CompetitionNaipe | null)
+      .filter((item): item is CompetitionNaipe => item === 'masculino' || item === 'feminino' || item === 'misto'),
   }
 }
 
@@ -81,6 +92,45 @@ function normalizeVenueOption(raw: Record<string, unknown>): CatalogOption | nul
     id,
     label: name,
     helper: helper || undefined
+  }
+}
+
+function naipeLabel(naipe: CompetitionNaipe) {
+  switch (naipe) {
+    case 'masculino':
+      return 'Masculino'
+    case 'feminino':
+      return 'Feminino'
+    default:
+      return 'Misto'
+  }
+}
+
+function normalizeEligibleTeamOption(
+  registration: CompetitionSeasonTeamRegistration,
+): CatalogOption | null {
+  const teamId = registration.team?.id ?? registration.teamId
+  const teamName = registration.team?.name
+  if (!teamId || !teamName) return null
+
+  const helper = [
+    registration.team?.shortName,
+    registration.naipe ? naipeLabel(registration.naipe) : null,
+  ].filter(Boolean).join(' • ')
+
+  return {
+    id: teamId,
+    label: teamName,
+    shortName: registration.team?.shortName ?? undefined,
+    helper: helper || undefined,
+    competitionId: registration.competitionSeasonId,
+    availableNaipes: registration.naipe ? [registration.naipe] : undefined,
+    metadata: {
+      registrationId: registration.id,
+      naipe: registration.naipe ?? null,
+      registrationStatus: registration.registrationStatus,
+      eligibilityStatus: registration.eligibilityStatus
+    }
   }
 }
 
@@ -112,10 +162,25 @@ export const MatchCatalogGateway = {
   },
 
   async listTeams(competitionSeasonId?: string): Promise<CatalogOption[]> {
-    const items = await fetchList(TEAMS_PATH, competitionSeasonId ? { competition_season_id: competitionSeasonId } : undefined)
-    return items
-      .map((item) => (item && typeof item === 'object' ? normalizeTeamOption(item as Record<string, unknown>) : null))
+    return this.listSeasonTeams(competitionSeasonId)
+  },
+
+  async listSeasonTeams(competitionSeasonId?: string, naipe?: CompetitionNaipe): Promise<CatalogOption[]> {
+    if (!competitionSeasonId) return []
+
+    const registrations = await SeasonRegistrationsGateway.listTeamRegistrations(competitionSeasonId)
+    const options = registrations
+      .filter((registration) => {
+        const isActive = ['draft', 'submitted', 'under_review', 'approved'].includes(registration.registrationStatus)
+        const isEligible = registration.eligibilityStatus === 'eligible'
+        const matchesNaipe = naipe ? registration.naipe === naipe : true
+        return isActive && isEligible && matchesNaipe
+      })
+      .map((registration) => normalizeEligibleTeamOption(registration))
       .filter((item): item is CatalogOption => Boolean(item))
+
+    return Array.from(new Map(options.map((item) => [item.id, item])).values())
+      .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'))
   },
 
   async listVenues(): Promise<CatalogOption[]> {

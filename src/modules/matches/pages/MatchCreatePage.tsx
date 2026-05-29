@@ -4,6 +4,7 @@ import { FormEvent, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CalendarClock, Loader2, MapPin, RefreshCcw, Shield, Users2 } from 'lucide-react'
 import type { AuthProfile } from '@/services/auth.service'
+import type { CompetitionNaipe } from '@/modules/competitions/types'
 import { DashboardShell } from '@/modules/dashboard/components/DashboardShell'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { AlertBanner } from '@/components/AlertBanner'
@@ -25,6 +26,17 @@ function parseIsoDate(value: string) {
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) return null
   return parsed.toISOString()
+}
+
+function naipeLabel(naipe: CompetitionNaipe) {
+  switch (naipe) {
+    case 'masculino':
+      return 'Masculino'
+    case 'feminino':
+      return 'Feminino'
+    default:
+      return 'Misto'
+  }
 }
 
 function RosterColumn({ title, participants }: { title: string; participants: MatchControlParticipant[] }) {
@@ -108,6 +120,7 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
 
   const [competitionId, setCompetitionId] = useState('')
   const [seasonId, setSeasonId] = useState('')
+  const [naipe, setNaipe] = useState('')
   const [homeTeamId, setHomeTeamId] = useState('')
   const [awayTeamId, setAwayTeamId] = useState('')
   const [venueId, setVenueId] = useState('')
@@ -118,11 +131,13 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
   })
   const [localError, setLocalError] = useState<string | null>(null)
 
-  const filteredTeams = useMemo(() => {
-    if (!seasonId) return teams
-    const fromSeason = teams.filter((team) => team.competitionId === seasonId)
-    return fromSeason.length ? fromSeason : teams
-  }, [seasonId, teams])
+  const selectedSeason = useMemo(
+    () => seasons.find((season) => season.id === seasonId) ?? null,
+    [seasonId, seasons]
+  )
+  const availableNaipes = selectedSeason?.availableNaipes ?? []
+  const resolvedNaipe = naipe || (availableNaipes.length === 1 ? availableNaipes[0] : '')
+  const requiresNaipeSelection = availableNaipes.length > 1
 
   const allDisabled = submitting || loadingCatalog
 
@@ -130,7 +145,7 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
     event.preventDefault()
     setLocalError(null)
 
-    if (!competitionId || !seasonId || !homeTeamId || !awayTeamId || !startAt) {
+    if (!competitionId || !seasonId || !resolvedNaipe || !homeTeamId || !awayTeamId || !startAt) {
       setLocalError('Preencha todos os campos obrigatórios.')
       return
     }
@@ -147,6 +162,7 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
 
     const payload: MatchCreatePayload = {
       competitionSeasonId: seasonId,
+      naipe: resolvedNaipe as CompetitionNaipe,
       homeTeamId,
       awayTeamId,
       startAt: startAtIso,
@@ -190,9 +206,9 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
 
             {created && (
               <AlertBanner variant="success" title="Partida criada">
-                <p className="text-sm text-textSecondary">
-                  O elenco inicial já foi copiado dos times. Você pode abrir o painel de controle para iniciar a operação.
-                </p>
+              <p className="text-sm text-textSecondary">
+                O elenco inicial já foi copiado com base nos atletas elegíveis da temporada. Você pode abrir o painel de controle para iniciar a operação.
+              </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button
                     type="button"
@@ -227,6 +243,7 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
                     const value = event.target.value
                     setCompetitionId(value)
                     setSeasonId('')
+                    setNaipe('')
                     setHomeTeamId('')
                     setAwayTeamId('')
                     loadTeams()
@@ -251,8 +268,11 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
                   value={seasonId}
                   onChange={(event) => {
                     const value = event.target.value
+                    const seasonOption = seasons.find((season) => season.id === value)
+                    const nextNaipe = seasonOption?.availableNaipes?.length === 1 ? seasonOption.availableNaipes[0] : ''
                     setSeasonId(value)
-                    loadTeams(value)
+                    setNaipe(nextNaipe)
+                    loadTeams(nextNaipe ? value : undefined, nextNaipe ? (nextNaipe as CompetitionNaipe) : undefined)
                     setHomeTeamId('')
                     setAwayTeamId('')
                   }}
@@ -265,6 +285,35 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
                     </option>
                   ))}
                 </Select>
+              </div>
+              <div className="space-y-1">
+                <span className="flex items-center gap-2 text-sm font-semibold text-textPrimary">
+                  <Shield className="h-4 w-4 text-textSecondary" />
+                  Naipe *
+                </span>
+                <Select
+                  value={resolvedNaipe}
+                  onChange={(event) => {
+                    const value = event.target.value
+                    setNaipe(value)
+                    setHomeTeamId('')
+                    setAwayTeamId('')
+                    loadTeams(value ? seasonId : undefined, value ? (value as CompetitionNaipe) : undefined)
+                  }}
+                  disabled={allDisabled || loadingSeasons || !seasonId || availableNaipes.length === 0}
+                >
+                  <option value="">Selecione o naipe</option>
+                  {availableNaipes.map((availableNaipe) => (
+                    <option key={availableNaipe} value={availableNaipe}>
+                      {naipeLabel(availableNaipe)}
+                    </option>
+                  ))}
+                </Select>
+                <p className="text-xs text-textSecondary">
+                  {requiresNaipeSelection
+                    ? 'A temporada possui mais de um naipe. Selecione o recorte correto para carregar as inscrições elegíveis.'
+                    : 'O naipe da temporada foi resolvido automaticamente a partir das inscrições elegíveis.'}
+                </p>
               </div>
               <div className="space-y-1">
                 <span className="flex items-center gap-2 text-sm font-semibold text-textPrimary">
@@ -292,10 +341,10 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
                 <Select
                   value={homeTeamId}
                   onChange={(event) => setHomeTeamId(event.target.value)}
-                  disabled={allDisabled || loadingTeams || !seasonId}
+                  disabled={allDisabled || loadingTeams || !seasonId || !resolvedNaipe}
                 >
                   <option value="">Selecione o mandante</option>
-                  {filteredTeams.map((team) => (
+                  {teams.map((team) => (
                     <option key={team.id} value={team.id}>
                       {team.label}
                     </option>
@@ -310,10 +359,10 @@ export function MatchCreatePage({ currentUser }: { currentUser: AuthProfile }) {
                 <Select
                   value={awayTeamId}
                   onChange={(event) => setAwayTeamId(event.target.value)}
-                  disabled={allDisabled || loadingTeams || !seasonId}
+                  disabled={allDisabled || loadingTeams || !seasonId || !resolvedNaipe}
                 >
                   <option value="">Selecione o visitante</option>
-                  {filteredTeams.map((team) => (
+                  {teams.map((team) => (
                     <option key={`${team.id}-away`} value={team.id}>
                       {team.label}
                     </option>

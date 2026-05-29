@@ -8,8 +8,6 @@ import { PaginationControls } from '@/components/PaginationControls'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { AlertBanner } from '@/components/AlertBanner'
 import { Button } from '@/components/ui/button'
-import { downloadBase64File } from '@/modules/match-control/utils/files'
-import { ScoresheetGateway } from '@/modules/match-control/services/scoresheet.service'
 import { MatchesFilters } from '../components/MatchesFilters'
 import { MatchesTable } from '../components/MatchesTable'
 import { useMatches } from '../hooks/useMatches'
@@ -95,22 +93,19 @@ export function MatchesPage({ currentUser }: { currentUser: AuthProfile }) {
     [router]
   )
 
-  const handleOpenScoresheet = useCallback(
-    async (match: MatchSummary) => {
-      setActionError(null)
-      const id = String(match.id)
-      setActionState({ matchId: id, action: 'scoresheet' })
-      try {
-        const payload = await ScoresheetGateway.fetch(id)
-        downloadBase64File(payload.base64, payload.filename, payload.mime)
-      } catch (err) {
-        console.error(`Failed to fetch scoresheet for match ${id}`, err)
-        setActionError(resolveMatchActionError(err, 'Não foi possível gerar a súmula da partida.'))
-      } finally {
-        setActionState(null)
-      }
+  const handleOpenRoster = useCallback(
+    (match: MatchSummary) => {
+      router.push(`/matches/${match.id}/roster`)
     },
-    []
+    [router]
+  )
+
+  const handleOpenScoresheet = useCallback(
+    (match: MatchSummary) => {
+      setActionError(null)
+      router.push(`/matches/${match.id}/scoresheet/preview`)
+    },
+    [router]
   )
 
   const handleEditMatch = useCallback(
@@ -152,6 +147,7 @@ export function MatchesPage({ currentUser }: { currentUser: AuthProfile }) {
           matches={matches}
           loading={loading}
           onTransitionAction={handleTransitionAction}
+          onOpenRoster={handleOpenRoster}
           onOpenEvents={handleOpenEvents}
           onOpenScoresheet={handleOpenScoresheet}
           onEdit={handleEditMatch}

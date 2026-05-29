@@ -111,8 +111,8 @@ export const translations = {
         title: 'Painel de controle',
         subtitle: 'Fluxo oficial da partida',
         back: 'Voltar',
-        syncNow: 'Forçar sincronização agora',
-        reload: 'Recarregar estado do servidor',
+        syncNow: 'Sincronizar',
+        reload: 'Recarregar',
         fullscreen: {
           enter: 'Tela cheia',
           exit: 'Sair da tela cheia'
@@ -347,8 +347,8 @@ export const translations = {
         title: 'Control panel',
         subtitle: 'Official match workflow',
         back: 'Back',
-        syncNow: 'Force sync now',
-        reload: 'Reload server state',
+        syncNow: 'Sync',
+        reload: 'Reload',
         fullscreen: {
           enter: 'Enter fullscreen',
           exit: 'Exit fullscreen'
@@ -583,8 +583,8 @@ export const translations = {
         title: 'Panel de control',
         subtitle: 'Flujo oficial del partido',
         back: 'Volver',
-        syncNow: 'Forzar sincronización ahora',
-        reload: 'Recargar estado del servidor',
+        syncNow: 'Sincronizar',
+        reload: 'Recargar',
         fullscreen: {
           enter: 'Pantalla completa',
           exit: 'Salir de pantalla completa'

@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils/cn'
 import { useState, type ChangeEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Button as UiButton } from '@/components/ui/button'
+import { ConfirmModal } from '@/components/ConfirmModal'
 
 interface ControlActionsProps {
   statusLabel: string
@@ -22,6 +23,8 @@ interface ControlActionsProps {
   loadingAction: MatchControlAction | null
   onAction: (action: MatchControlAction, payload?: { reason?: string }) => void
   lastSync?: string | null
+  isTerminal?: boolean
+  disabled?: boolean
 }
 
 export function ControlActions({
@@ -34,16 +37,20 @@ export function ControlActions({
   canCancel,
   loadingAction,
   onAction,
-  lastSync
+  lastSync,
+  isTerminal = false,
+  disabled = false
 }: ControlActionsProps) {
   const { dictionary, language } = useI18n()
   const copy = dictionary.matchControl.controls
   const [resumePrompt, setResumePrompt] = useState(false)
   const [pausePrompt, setPausePrompt] = useState(false)
+  const [cancelPrompt, setCancelPrompt] = useState(false)
   const [pauseReason, setPauseReason] = useState('')
   const [pauseError, setPauseError] = useState<string | null>(null)
 
   const handleAction = (action: MatchControlAction) => {
+    if (disabled) return
     if (action === 'resume') {
       setResumePrompt(true)
       return
@@ -52,6 +59,10 @@ export function ControlActions({
       setPauseReason('')
       setPauseError(null)
       setPausePrompt(true)
+      return
+    }
+    if (action === 'cancel') {
+      setCancelPrompt(true)
       return
     }
     onAction(action)
@@ -69,6 +80,7 @@ export function ControlActions({
   const buttons: Array<{
     action: MatchControlAction
     label: string
+    shortLabel: string
     loadingLabel: string
     icon: LucideIcon
     variant: 'primary' | 'secondary' | 'outline' | 'ghost'
@@ -78,6 +90,7 @@ export function ControlActions({
     {
       action: 'start',
       label: copy.buttons.start,
+      shortLabel: copy.buttons.start,
       loadingLabel: copy.buttons.starting,
       icon: PlayCircle,
       variant: 'primary',
@@ -86,6 +99,7 @@ export function ControlActions({
     {
       action: 'resume',
       label: copy.buttons.resume,
+      shortLabel: copy.buttons.resume,
       loadingLabel: copy.buttons.resuming,
       icon: RotateCcw,
       variant: 'secondary',
@@ -95,6 +109,7 @@ export function ControlActions({
     {
       action: 'pause',
       label: copy.buttons.pause,
+      shortLabel: copy.buttons.pause,
       loadingLabel: copy.buttons.pausing,
       icon: PauseCircle,
       variant: 'secondary',
@@ -104,6 +119,7 @@ export function ControlActions({
     {
       action: 'finish',
       label: copy.buttons.finish,
+      shortLabel: 'Encerrar',
       loadingLabel: copy.buttons.finishing,
       icon: Flag,
       variant: 'outline',
@@ -113,6 +129,7 @@ export function ControlActions({
     {
       action: 'startNextPeriod',
       label: copy.buttons.startNextPeriod,
+      shortLabel: 'Próximo período',
       loadingLabel: copy.buttons.startingNextPeriod,
       icon: Timer,
       variant: 'secondary',
@@ -122,24 +139,38 @@ export function ControlActions({
     {
       action: 'cancel',
       label: copy.buttons.cancel,
+      shortLabel: 'Cancelar',
       loadingLabel: copy.buttons.canceling,
       icon: Octagon,
-      variant: 'outline',
-      highlight: 'text-primary',
+      variant: 'danger',
+      highlight: '',
       enabled: canCancel
     }
   ]
+  const enabledButtons = buttons.filter(({ enabled }) => enabled)
   return (
-    <section className="card space-y-4 p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-wide text-textSecondary">{copy.title}</p>
-          <p className="text-xl font-semibold text-textPrimary">{copy.subtitle}</p>
-        </div>
-        <p className="text-xs text-textSecondary">
+    <section className="card space-y-2.5 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-textSecondary">{copy.title}</p>
+        <p className="shrink-0 text-[10px] text-textSecondary">
           {copy.lastSync}: {formatTimestamp(lastSync, language)}
         </p>
       </div>
+      <div className="flex flex-wrap items-center gap-2 text-[11px] text-textSecondary">
+        <span className="rounded-full border border-borderSoft/60 bg-surface px-2 py-0.5 font-semibold text-textPrimary">
+          {copy.statusLabel}: {statusLabel}
+        </span>
+        {canStartNextPeriod && (
+          <span className="opacity-80">
+            {copy.nextPeriod}: {copy.startNextPeriod}
+          </span>
+        )}
+      </div>
+      {isTerminal && (
+        <div className="rounded-lg border border-borderSoft/60 bg-surface-muted px-3 py-2 text-xs text-textSecondary">
+          Partida finalizada ou cancelada. As ações operacionais ficam bloqueadas.
+        </div>
+      )}
       {resumePrompt && (
         <ResumeConfirmModal
           title={copy.resumeConfirm}
@@ -170,38 +201,49 @@ export function ControlActions({
           onCancel={() => setPausePrompt(false)}
         />
       )}
-      <div className="flex flex-wrap gap-2">
-        {buttons.filter(({ enabled }) => enabled).map(({ action, label, loadingLabel, icon: Icon, variant, highlight }) => (
-          <Button
-            key={action}
-            variant={variant}
-            size="sm"
-            onClick={() => handleAction(action)}
-            disabled={loadingAction !== null}
-            className={cn(
-              'flex-1 min-w-[140px] justify-center gap-2 rounded-lg border border-borderSoft/40 bg-[var(--surface-muted)] text-sm font-semibold text-textPrimary',
-              variant === 'primary' && 'border-transparent bg-primary text-onPrimary hover:bg-primary/90',
-              variant === 'secondary' && 'border-transparent bg-secondary/15 text-secondary hover:bg-secondary/25',
-              variant === 'outline' && 'bg-transparent hover:border-borderStrong',
-              highlight
-            )}
-          >
-            <Icon className="h-4 w-4" />
-            {loadingAction === action ? loadingLabel : label}
-          </Button>
-        ))}
-      </div>
-      <div className="rounded-2xl bg-surface-muted px-4 py-3 text-sm text-textSecondary">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span>
-            {copy.statusLabel}:{' '}
-            <span className="font-semibold text-textPrimary">{statusLabel}</span>
-          </span>
-          <span className="text-xs text-textSecondary opacity-80">
-            {copy.nextPeriod} • {copy.startNextPeriod}
-          </span>
+      {cancelPrompt && (
+        <ConfirmModal
+          open
+          title={copy.buttons.cancel}
+          description="Cancelar esta partida? Esta ação não poderá ser desfeita."
+          confirmLabel={copy.buttons.cancel}
+          cancelLabel={dictionary.actions.cancel ?? 'Cancelar'}
+          onCancel={() => setCancelPrompt(false)}
+          onConfirm={() => {
+            setCancelPrompt(false)
+            onAction('cancel')
+          }}
+        />
+      )}
+      {enabledButtons.length > 0 && (
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {enabledButtons.map(({ action, label, shortLabel, loadingLabel, icon: Icon, variant, highlight }) => (
+            <Button
+              key={action}
+              variant={variant}
+              size="sm"
+              onClick={() => handleAction(action)}
+              disabled={loadingAction !== null || disabled}
+              title={label}
+              aria-label={label}
+              className={cn(
+                'h-9 w-full justify-start gap-2 rounded-lg px-3 text-xs font-semibold leading-none whitespace-nowrap',
+                variant === 'primary' && 'border-transparent bg-primary text-onPrimary hover:bg-primary/90',
+                variant === 'secondary' && 'border border-borderSoft/40 bg-[var(--surface-muted)] text-secondary hover:bg-secondary/25 hover:text-textPrimary',
+                variant === 'outline' && 'border border-borderSoft/40 bg-transparent text-textPrimary hover:border-borderStrong',
+                variant === 'ghost' && 'border border-transparent bg-transparent text-textSecondary hover:bg-[rgba(255,255,255,0.06)] hover:text-textPrimary',
+                variant === 'danger' && 'border border-[rgba(255,91,110,0.25)] bg-[rgba(255,91,110,0.16)] text-danger hover:bg-[rgba(255,91,110,0.22)]',
+                highlight
+              )}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="truncate">
+                {loadingAction === action ? loadingLabel : shortLabel}
+              </span>
+            </Button>
+          ))}
         </div>
-      </div>
+      )}
     </section>
   )
 }

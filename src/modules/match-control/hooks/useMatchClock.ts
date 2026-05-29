@@ -14,6 +14,7 @@ export interface MatchTimeEvent {
 
 export interface MatchClockState {
   seconds: number
+  elapsedSeconds: number
   isRunning: boolean
   lastSync: Date | null
   duration: number
@@ -27,18 +28,25 @@ export function useMatchClock(
   initialSnapshot?: MatchControlSnapshot | null
 ): MatchClockState {
   const [seconds, setSeconds] = useState(0)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [isRunning, setIsRunning] = useState(false)
   const [duration, setDuration] = useState<number>(0)
   const [lastSync, setLastSync] = useState<Date | null>(null)
   const timerRef = useRef<number | null>(null)
   const channelRef = useRef<{ name: string; echo: Echo } | null>(null)
+  const durationRef = useRef<number>(0)
+
+  useEffect(() => {
+    durationRef.current = duration
+  }, [duration])
 
   const handleUpdate = useCallback((payload: MatchTimeEvent) => {
-    const periodLength = duration > 0 ? duration : PERIOD_LENGTH_DEFAULT
+    const periodLength = durationRef.current > 0 ? durationRef.current : PERIOD_LENGTH_DEFAULT
     const aggregatedSeconds = Math.max(0, payload.current_seconds ?? 0)
     const nextSeconds = aggregatedSeconds % periodLength
     const nextDuration = Math.max(periodLength, nextSeconds)
     setSeconds(nextSeconds)
+    setElapsedSeconds(aggregatedSeconds)
     setIsRunning(Boolean(payload.is_running))
     setDuration(nextDuration)
     setLastSync(new Date())
@@ -49,6 +57,7 @@ export function useMatchClock(
 
     // reset padrão para nova partida sem estado inicial
     setSeconds(0)
+    setElapsedSeconds(0)
     setIsRunning(false)
     setDuration(0)
     setLastSync(null)
@@ -79,6 +88,7 @@ export function useMatchClock(
     const displaySeconds = Math.max(0, Number.isFinite(initialSeconds) ? initialSeconds % periodLength : 0)
 
     setSeconds(displaySeconds)
+    setElapsedSeconds(Math.max(0, Number.isFinite(initialSeconds) ? initialSeconds : 0))
     setIsRunning(running)
     setDuration(periodLength)
     setLastSync(new Date())
@@ -134,6 +144,7 @@ export function useMatchClock(
         }
         return next
       })
+      setElapsedSeconds((prev) => prev + 1)
     }, 1000)
 
     return () => {
@@ -144,5 +155,5 @@ export function useMatchClock(
     }
   }, [isRunning, duration])
 
-  return { seconds, isRunning, lastSync, duration }
+  return { seconds, elapsedSeconds, isRunning, lastSync, duration }
 }

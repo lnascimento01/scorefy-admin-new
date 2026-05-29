@@ -163,6 +163,7 @@ function normalizeTeamRegistration(raw: unknown): CompetitionSeasonTeamRegistrat
     id,
     competitionSeasonId: seasonId,
     teamId,
+    naipe: (asString(record.naipe) as CompetitionSeasonTeamRegistration['naipe']) ?? null,
     registrationStatus: registrationStatus as CompetitionSeasonTeamRegistration['registrationStatus'],
     eligibilityStatus: eligibilityStatus as CompetitionSeasonTeamRegistration['eligibilityStatus'],
     submittedAt: asString(record.submitted_at ?? record.submittedAt) ?? undefined,

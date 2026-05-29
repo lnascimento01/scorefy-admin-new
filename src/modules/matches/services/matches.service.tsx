@@ -88,6 +88,7 @@ export const MatchesGateway = {
     const api = await getApi()
     const { data } = await api.post(MATCHES_PATH, {
       competition_season_id: payload.competitionSeasonId,
+      naipe: payload.naipe,
       home_team_id: payload.homeTeamId,
       away_team_id: payload.awayTeamId,
       start_at: payload.startAt,
@@ -124,10 +125,12 @@ export const MatchesGateway = {
     const api = await getApi()
     const { data } = await api.patch(`${MATCHES_PATH}/${id}`, {
       ...(payload.competitionSeasonId ? { competition_season_id: payload.competitionSeasonId } : {}),
+      ...(payload.naipe !== undefined ? { naipe: payload.naipe } : {}),
       ...(payload.homeTeamId ? { home_team_id: payload.homeTeamId } : {}),
       ...(payload.awayTeamId ? { away_team_id: payload.awayTeamId } : {}),
       ...(payload.startAt ? { start_at: payload.startAt } : {}),
-      ...(payload.venueId !== undefined ? { venue_id: payload.venueId || null } : {})
+      ...(payload.venueId !== undefined ? { venue_id: payload.venueId || null } : {}),
+      ...(payload.broadcastUrl !== undefined ? { broadcast_url: payload.broadcastUrl || null } : {})
     })
     const detail = normalizeMatchDetail(data?.data ?? data)
     if (!detail) {
@@ -142,12 +145,12 @@ export const MatchesGateway = {
       throw new Error('Match identifier is required.')
     }
     const api = await getApi()
-    const { data } = await api.get(`${MATCHES_PATH}/${id}`, {
-      params: {
-        include:
-          'competition,venue,home_team,away_team,events.team,events.player,players,players.team'
-      }
-    })
+      const { data } = await api.get(`${MATCHES_PATH}/${id}`, {
+        params: {
+          include:
+          'competition,venue,home_team,away_team,events.team,events.player,players,players.team,players.position'
+        }
+      })
     const payload = data?.data ?? data
     const detail = normalizeMatchDetail(payload)
     if (!detail) {

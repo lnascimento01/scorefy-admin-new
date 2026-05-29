@@ -30,12 +30,16 @@ import type { Language, TranslationRecord } from '@/lib/i18n'
 import dynamic from 'next/dynamic'
 import { toast } from 'react-toastify'
 import { formatClock } from '@/modules/match-control/utils/time'
+import {
+  buildSuspensionLookup,
+  getActiveSuspensions,
+  groupSuspensionsBySide,
+  type ActiveSuspension
+} from '@/modules/match-control/utils/suspensions'
 import { resolveMatchActionError } from '../utils/errors'
 import {
   formatMatchStatusLabel,
-  getMatchActionCapabilities,
-  getMatchStatusVariant,
-  type MatchStatusVariant
+  getMatchActionCapabilities
 } from '../utils/status'
 import 'react-toastify/dist/ReactToastify.css'
 
@@ -47,6 +51,87 @@ const ToastViewport = dynamic(async () => {
 interface MatchControlPageProps {
   currentUser: AuthProfile
   matchId: string
+}
+
+function resolveMatchPeriodLabel({
+  status,
+  statusLabel,
+  period,
+  periodLabel,
+  elapsedSeconds
+}: {
+  status: string
+  statusLabel?: string | null
+  period?: number | null
+  periodLabel?: string | null
+  elapsedSeconds?: number | null
+}) {
+  const normalizedStatus = String(status ?? '').trim().toLowerCase()
+  const fallbackPeriodLabel = periodLabel?.trim() || null
+  const fallbackStatusLabel = statusLabel?.trim() || null
+  const resolvedElapsed = Number.isFinite(elapsedSeconds ?? NaN) ? Number(elapsedSeconds) : 0
+  const resolvedPeriod = Number.isFinite(period ?? NaN) ? Number(period) : 0
+
+  if (['scheduled', 'not_started', 'pending'].includes(normalizedStatus)) {
+    return 'Pré-jogo'
+  }
+
+  if (['live', 'in_progress', 'started'].includes(normalizedStatus)) {
+    if (fallbackPeriodLabel) {
+      return fallbackPeriodLabel
+    }
+    if (resolvedPeriod > 0) {
+      if (resolvedPeriod === 1) return '1º Tempo'
+      if (resolvedPeriod === 2) return '2º Tempo'
+      if (resolvedPeriod === 3) return 'Prorrogação'
+      if (resolvedPeriod === 4) return 'Penais'
+      return `Período ${resolvedPeriod}`
+    }
+    return resolvedElapsed >= 30 * 60 ? '2º Tempo' : '1º Tempo'
+  }
+
+  if (normalizedStatus === 'finished' || normalizedStatus === 'final') {
+    return fallbackPeriodLabel ?? fallbackStatusLabel ?? 'Finalizado'
+  }
+
+  if (normalizedStatus === 'paused') {
+    if (fallbackPeriodLabel) {
+      return fallbackPeriodLabel
+    }
+    if (resolvedPeriod > 0) {
+      if (resolvedPeriod === 1) return '1º Tempo'
+      if (resolvedPeriod === 2) return '2º Tempo'
+      if (resolvedPeriod === 3) return 'Prorrogação'
+      if (resolvedPeriod === 4) return 'Penais'
+      return `Período ${resolvedPeriod}`
+    }
+    if (resolvedElapsed > 0) {
+      return resolvedElapsed >= 30 * 60 ? '2º Tempo' : '1º Tempo'
+    }
+    return fallbackStatusLabel ?? 'Jogo pausado'
+  }
+
+  if (normalizedStatus === 'halftime' || normalizedStatus === 'interval') {
+    return fallbackPeriodLabel ?? fallbackStatusLabel ?? 'Intervalo'
+  }
+
+  if (fallbackPeriodLabel) {
+    return fallbackPeriodLabel
+  }
+
+  if (resolvedPeriod > 0) {
+    if (resolvedPeriod === 1) return '1º Tempo'
+    if (resolvedPeriod === 2) return '2º Tempo'
+    if (resolvedPeriod === 3) return 'Prorrogação'
+    if (resolvedPeriod === 4) return 'Penais'
+    return `Período ${resolvedPeriod}`
+  }
+
+  if (resolvedElapsed > 0) {
+    return resolvedElapsed >= 30 * 60 ? '2º Tempo' : '1º Tempo'
+  }
+
+  return fallbackStatusLabel ?? 'Pré-jogo'
 }
 
 export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps) {
@@ -69,7 +154,8 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
     pendingEvents,
     networkStatus,
     timeoutState,
-    clearTimeout
+    clearTimeout,
+    deleteEvent,
   } = useMatchControl(matchId)
   // subscribe immediately on mount so the initial event is captured, seeding with backend clock if present
   const matchClockState = useMatchClock(matchId, snapshot ?? undefined)
@@ -98,20 +184,53 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
   const [clockInput, setClockInput] = useState('00:00')
   const [clockError, setClockError] = useState<string | null>(null)
   const [clockSaving, setClockSaving] = useState(false)
-
-  const periodLabel = useMemo(() => {
-    const value = snapshot?.period ?? detail?.period
-    if (!value || value <= 0) return 'Pré-jogo'
-    if (value === 1) return '1º Tempo'
-    if (value === 2) return '2º Tempo'
-    if (value === 3) return 'Prorrogação'
-    if (value === 4) return 'Penais'
-    return `Período ${value}`
-  }, [detail?.period, snapshot?.period])
+  const [broadcastOpen, setBroadcastOpen] = useState(false)
 
   const rawStatus = snapshot?.status ?? detail?.status ?? 'scheduled'
-  const statusLabel = formatMatchStatusLabel(rawStatus, dictionary.dashboard.status)
-  const statusVariant = getMatchStatusVariant(rawStatus)
+  const statusLabel = snapshot?.statusLabel ?? formatMatchStatusLabel(rawStatus, dictionary.dashboard.status)
+  const periodLabel = useMemo(
+    () =>
+      resolveMatchPeriodLabel({
+        status: rawStatus,
+        statusLabel,
+        period: snapshot?.period ?? detail?.period,
+        periodLabel: snapshot?.periodLabel,
+        elapsedSeconds: snapshot?.elapsedSeconds ?? 0
+      }),
+    [
+      detail?.period,
+      rawStatus,
+      snapshot?.elapsedSeconds,
+      snapshot?.period,
+      snapshot?.periodLabel,
+      statusLabel
+    ]
+  )
+  const participantLookup = useMemo(() => buildParticipantLookup(detail), [detail])
+  const activeSuspensions = useMemo(
+    () => getActiveSuspensions(events, matchClockState.elapsedSeconds),
+    [events, matchClockState.elapsedSeconds]
+  )
+  const enrichedSuspensions = useMemo(
+    () => activeSuspensions.map((suspension) => enrichSuspensionDisplay(suspension, participantLookup.get(suspension.playerId))),
+    [activeSuspensions, participantLookup]
+  )
+  const suspensionsByPlayerId = useMemo(
+    () => buildSuspensionLookup(activeSuspensions),
+    [activeSuspensions]
+  )
+  const suspensionsBySide = useMemo(
+    () => groupSuspensionsBySide(enrichedSuspensions),
+    [enrichedSuspensions]
+  )
+  const homeSuspensions = useMemo(
+    () => suspensionsBySide.home,
+    [suspensionsBySide.home]
+  )
+  const awaySuspensions = useMemo(
+    () => suspensionsBySide.away,
+    [suspensionsBySide.away]
+  )
   const {
     canStart,
     canPause,
@@ -119,17 +238,16 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
     canFinish,
     canStartNextPeriod,
     canCancel: canCancelMatch,
-    canGenerateScoresheet
+    canGenerateScoresheet,
+    isTerminal
   } = getMatchActionCapabilities(rawStatus)
+  const actionsLocked = eventLoading || loadingAction !== null || isTerminal
 
-  const scoreboardHome = detail
-    ? { ...detail.homeTeam, score: snapshot?.home.score ?? detail.homeTeam.score }
-    : null
-  const scoreboardAway = detail
-    ? { ...detail.awayTeam, score: snapshot?.away.score ?? detail.awayTeam.score }
-    : null
+  const scoreboardHome = detail ? { ...detail.homeTeam } : null
+  const scoreboardAway = detail ? { ...detail.awayTeam } : null
 
   const handleQuickAction = (action: MatchQuickAction) => {
+    if (actionsLocked) return
     if (action.team === 'both') return
     if (action.requiresPlayer) {
       setSelection({ action, team: action.team })
@@ -139,6 +257,7 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
   }
 
   const handleSelectPlayer = (playerId: string) => {
+    if (actionsLocked) return
     if (!selection) return
     triggerQuickAction(selection.action, { team: selection.team, playerId }).catch(() => undefined)
     setSelection(null)
@@ -162,6 +281,7 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
 
   const handlePlayerEvent = useCallback(
     (team: MatchSide, playerId: string, action: PlayerEventAction) => {
+      if (actionsLocked) return
       if (!playerId) return
       const quickAction: MatchQuickAction = {
         id: `${team}-${action.id}`,
@@ -172,7 +292,7 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
       }
       triggerQuickAction(quickAction, { team, playerId }).catch(() => undefined)
     },
-    [triggerQuickAction]
+    [actionsLocked, triggerQuickAction]
   )
 
   const handleDownloadScoresheet = async () => {
@@ -255,6 +375,14 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
     }
   }
 
+  useEffect(() => {
+    if (isTerminal) {
+      setSelection(null)
+      setClockDialogOpen(false)
+      clearTimeout()
+    }
+  }, [clearTimeout, isTerminal])
+
   return (
     <DashboardShell userName={currentUser.name} userEmail={currentUser.email} onRefresh={() => { void reload() }}>
       <ToastViewport position="top-right" newestOnTop pauseOnHover={false} closeOnClick theme="dark" />
@@ -300,21 +428,18 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
         )}
         {scoresheetMessage && <AlertBanner variant="info" message={scoresheetMessage} />}
 
-        <section className="card space-y-4 p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="flex flex-1 items-center gap-3">
-              <Button variant="outline" onClick={() => router.push('/matches')}>
+        <section className="card space-y-3 p-3 md:p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2.5">
+              <Button variant="outline" size="sm" onClick={() => router.push('/matches')}>
                 {matchControlCopy.header.back}
               </Button>
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-textSecondary">{matchControlCopy.header.breadcrumb}</p>
-                <p className="text-2xl font-semibold text-textPrimary">{matchControlCopy.header.title}</p>
-                {detail?.competitionName && (
-                  <p className="text-sm text-textSecondary">{detail.competitionName}</p>
-                )}
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-[0.28em] text-textSecondary">{matchControlCopy.header.breadcrumb}</p>
+                <p className="truncate text-lg font-semibold text-textPrimary">{matchControlCopy.header.title}</p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               <StatusPill
                 label={networkStatus === 'online' ? matchControlCopy.badges.online : matchControlCopy.badges.offline}
                 variant={networkStatus === 'online' ? 'success' : 'warning'}
@@ -330,78 +455,56 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="ghost" onClick={() => { void reload() }}>
+            <Button size="sm" variant="ghost" onClick={() => { void reload() }}>
               {matchControlCopy.header.syncNow}
             </Button>
-            <Button variant="secondary" onClick={() => { void reload() }}>
+            <Button size="sm" variant="secondary" onClick={() => { void reload() }}>
               {matchControlCopy.header.reload}
             </Button>
-            <Button variant="outline" onClick={handleToggleFullscreen}>
+            <Button size="sm" variant="outline" onClick={handleToggleFullscreen}>
               {isFullscreen ? matchControlCopy.header.fullscreen.exit : matchControlCopy.header.fullscreen.enter}
             </Button>
             {canGenerateScoresheet && (
-              <Button onClick={handleDownloadScoresheet} disabled={scoresheetLoading}>
+              <Button size="sm" onClick={handleDownloadScoresheet} disabled={scoresheetLoading}>
                 {scoresheetLoading ? matchControlCopy.header.scoresheet.loading : matchControlCopy.header.scoresheet.view}
               </Button>
             )}
           </div>
 
           {loading && (
-            <div className="mt-6 rounded-xl border border-dashed border-borderSoft p-10 text-center text-sm text-textSecondary">
+            <div className="rounded-xl border border-dashed border-borderSoft p-8 text-center text-sm text-textSecondary">
               {matchControlCopy.loading}
             </div>
           )}
 
           {!loading && detail && scoreboardHome && scoreboardAway && (
-            <div className="mt-6 space-y-6">
+            <div className="space-y-3">
               <MatchOverviewCard
                 detail={detail}
                 home={scoreboardHome}
                 away={scoreboardAway}
                 periodLabel={periodLabel}
                 statusLabel={statusLabel}
-                statusVariant={statusVariant}
                 dictionary={matchControlCopy}
                 language={language}
-                onEditClock={() => setClockDialogOpen(true)}
+                onEditClock={!isTerminal ? () => setClockDialogOpen(true) : undefined}
                 clockState={matchClockState}
+                homeSuspensions={homeSuspensions}
+                awaySuspensions={awaySuspensions}
               />
 
-              <div className="grid gap-6 xl:grid-cols-[2.2fr_0.8fr]">
-                <div className="space-y-6">
-                  <div className="grid gap-6 xl:grid-cols-[minmax(220px,0.9fr)_minmax(0,2.1fr)]">
-                    <EventList events={events} loading={loading} className="min-h-[900px] xl:self-start" />
-                    <div className="space-y-6">
-                      <QuickActions
-                        actions={quickActions}
-                        onTrigger={handleQuickAction}
-                        disabled={eventLoading}
-                        variant="compact"
-                      />
-                      <div className="grid gap-4 lg:grid-cols-2">
-                        <PlayerGrid
-                          title={`Jogadores Mandante — ${detail.homeTeam.name}`}
-                          participants={detail.participants.home}
-                          side="home"
-                          actions={playerEventActions}
-                          disabled={eventLoading}
-                          onTriggerEvent={(playerId, action) => handlePlayerEvent('home', playerId, action)}
-                        />
-                        <PlayerGrid
-                          title={`Jogadores Visitante — ${detail.awayTeam.name}`}
-                          participants={detail.participants.away}
-                          side="away"
-                          actions={playerEventActions}
-                          disabled={eventLoading}
-                          onTriggerEvent={(playerId, action) => handlePlayerEvent('away', playerId, action)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.2fr)_minmax(0,0.95fr)]">
+                <PlayerGrid
+                  title={matchControlCopy.labels.homeTeam}
+                  participants={detail.participants.home}
+                  side="home"
+                  actions={playerEventActions}
+                  suspensionsByPlayerId={suspensionsByPlayerId}
+                  disabled={actionsLocked}
+                  onTriggerEvent={(playerId, action) => handlePlayerEvent('home', playerId, action)}
+                />
 
-                <div className="space-y-6 xl:max-w-[360px] xl:justify-self-end">
-                  <BroadcastCard url={detail.broadcastUrl} dictionary={matchControlCopy} />
+                <div className="space-y-3 xl:sticky xl:top-4 xl:flex xl:h-[calc(100vh-8rem)] xl:flex-col xl:overflow-hidden">
                   <ControlActions
                     statusLabel={statusLabel}
                     canStart={canStart}
@@ -413,7 +516,40 @@ export function MatchControlPage({ currentUser, matchId }: MatchControlPageProps
                     loadingAction={loadingAction}
                     onAction={(action, payload) => handleControlAction(action, payload)}
                     lastSync={lastSyncAt}
+                    isTerminal={isTerminal}
+                    disabled={actionsLocked}
                   />
+                  <QuickActions
+                    actions={quickActions}
+                    onTrigger={handleQuickAction}
+                    disabled={actionsLocked}
+                    variant="compact"
+                  />
+                  <BroadcastCard
+                    url={detail.broadcastUrl}
+                    dictionary={matchControlCopy}
+                    open={broadcastOpen}
+                    onToggle={() => setBroadcastOpen((prev) => !prev)}
+                  />
+                  <EventList
+                    events={events}
+                    loading={loading}
+                    onDeleteEvent={(event) => { void deleteEvent(event.id) }}
+                    canDeleteEvents={!isTerminal && !actionsLocked}
+                    className="xl:flex-1 xl:min-h-0"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                <PlayerGrid
+                  title={matchControlCopy.labels.awayTeam}
+                  participants={detail.participants.away}
+                  side="away"
+                  actions={playerEventActions}
+                    suspensionsByPlayerId={suspensionsByPlayerId}
+                  disabled={actionsLocked}
+                  onTriggerEvent={(playerId, action) => handlePlayerEvent('away', playerId, action)}
+                />
                 </div>
               </div>
             </div>
@@ -471,22 +607,24 @@ function MatchOverviewCard({
   away,
   periodLabel,
   statusLabel,
-  statusVariant,
   dictionary,
   language,
   onEditClock,
-  clockState
+  clockState,
+  homeSuspensions,
+  awaySuspensions
 }: {
   detail: MatchControlDetail
   home: MatchControlTeamInfo
   away: MatchControlTeamInfo
   periodLabel: string
   statusLabel: string
-  statusVariant: MatchStatusVariant
   dictionary: MatchControlDictionary
   language: Language
   onEditClock?: () => void
   clockState: MatchClockState
+  homeSuspensions: ActiveSuspension[]
+  awaySuspensions: ActiveSuspension[]
 }) {
   const startDate = detail.startAt
     ? formatTimestamp(detail.startAt, language, {
@@ -497,56 +635,69 @@ function MatchOverviewCard({
     })
     : '—'
   return (
-    <section className="card space-y-5 p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-textSecondary">{detail.competitionName}</p>
-          <p className="text-sm text-textSecondary">{detail.venueName ?? dictionary.overview.noVenue}</p>
-        </div>
-        <StatusPill label={statusLabel} variant={statusVariant} />
-      </div>
+    <section className="card space-y-3 p-3 md:p-4">
       <ScoreBoard
         home={home}
         away={away}
         periodLabel={periodLabel}
         statusLabel={statusLabel}
-        competitionName={detail.competitionName}
+        competitionName={[detail.competitionName, detail.competitionSeason].filter(Boolean).join(' • ') || undefined}
         onEditClock={onEditClock}
         clockState={clockState}
+        homeSuspensions={homeSuspensions}
+        awaySuspensions={awaySuspensions}
+        variant="compact"
       />
-      <div className="grid gap-3 md:grid-cols-2">
-        <InfoTile label={dictionary.overview.startLabel} value={startDate} />
-        <InfoTile label={dictionary.overview.venueLabel} value={detail.venueName ?? dictionary.overview.noVenue} />
-      </div>
+      <p className="text-[11px] text-textSecondary">
+        {(detail.venueName ?? dictionary.overview.noVenue)} • {startDate}
+      </p>
     </section>
   )
 }
 
-function BroadcastCard({ url, dictionary }: { url?: string | null; dictionary: MatchControlDictionary }) {
+function BroadcastCard({
+  url,
+  dictionary,
+  open,
+  onToggle
+}: {
+  url?: string | null
+  dictionary: MatchControlDictionary
+  open: boolean
+  onToggle: () => void
+}) {
   const resolvedUrl = url ? resolveBroadcastUrl(url) : null
   return (
-    <section className="card space-y-4 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-textSecondary">{dictionary.broadcast.title}</p>
-          <p className="text-lg font-semibold text-textPrimary">{dictionary.broadcast.subtitle}</p>
-        </div>
+    <section className="card space-y-2 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-textSecondary">{dictionary.broadcast.title}</p>
+        {resolvedUrl && (
+          <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[10px]" onClick={onToggle}>
+            {open ? 'Ocultar' : 'Ver transmissão'}
+          </Button>
+        )}
       </div>
       {resolvedUrl ? (
-        <div className="min-h-[300px] aspect-video w-full overflow-hidden rounded-2xl border border-borderSoft">
-          <iframe
-            title={dictionary.broadcast.title}
-            src={resolvedUrl}
-            className="h-full w-full"
-            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            referrerPolicy="strict-origin-when-cross-origin"
-            allowFullScreen
-          />
-        </div>
+        open ? (
+          <div className="aspect-video max-h-36 w-full overflow-hidden rounded-xl border border-borderSoft/50 bg-surface-muted">
+            <iframe
+              title={dictionary.broadcast.title}
+              src={resolvedUrl}
+              className="h-full w-full"
+              allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+            />
+          </div>
+        ) : (
+          <p className="rounded-lg border border-borderSoft/40 bg-surface-muted px-3 py-2 text-[11px] text-textSecondary">
+            Transmissão disponível. Clique em “Ver transmissão”.
+          </p>
+        )
       ) : (
-        <div className="min-h-[300px] rounded-2xl border border-dashed border-borderSoft p-6 text-center text-sm text-textSecondary">
+        <p className="rounded-lg border border-dashed border-borderSoft/60 px-3 py-2 text-[11px] text-textSecondary">
           {dictionary.broadcast.empty}
-        </div>
+        </p>
       )}
     </section>
   )
@@ -560,18 +711,9 @@ function StatusPill({ label, variant }: { label: string; variant: 'success' | 'i
     danger: 'bg-rose-500/20 text-rose-300'
   }
   return (
-    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${variantClass[variant]}`}>
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${variantClass[variant]}`}>
       {label}
     </span>
-  )
-}
-
-function InfoTile({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-borderSoft/60 bg-surface-muted px-4 py-3 text-sm">
-      <p className="text-xs uppercase tracking-wide text-textSecondary">{label}</p>
-      <p className="text-base font-semibold text-textPrimary">{value}</p>
-    </div>
   )
 }
 
@@ -595,6 +737,37 @@ function resolveBroadcastUrl(rawUrl: string): string {
     return rawUrl
   } catch {
     return rawUrl
+  }
+}
+
+function buildParticipantLookup(detail: MatchControlDetail | null): Map<string, MatchControlParticipant> {
+  const lookup = new Map<string, MatchControlParticipant>()
+  if (!detail) return lookup
+  detail.participants.home.forEach((participant) => {
+    lookup.set(participant.id, participant)
+  })
+  detail.participants.away.forEach((participant) => {
+    lookup.set(participant.id, participant)
+  })
+  return lookup
+}
+
+function enrichSuspensionDisplay(
+  suspension: ActiveSuspension,
+  participant?: MatchControlParticipant
+): ActiveSuspension & { displayLabel: string } {
+  const shirtNumber = participant?.shirtNumber
+  const participantLabel =
+    participant?.nick?.trim() ||
+    participant?.name?.trim() ||
+    suspension.playerName?.trim() ||
+    'Atleta'
+
+  return {
+    ...suspension,
+    team: suspension.team ?? participant?.team,
+    playerName: suspension.playerName ?? participant?.name ?? participant?.nick,
+    displayLabel: typeof shirtNumber === 'number' ? `#${shirtNumber} ${participantLabel}` : participantLabel
   }
 }
 

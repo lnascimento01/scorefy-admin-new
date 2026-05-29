@@ -17,9 +17,9 @@ let initPromise: Promise<Echo> | null = null
 let csrfPromise: Promise<void> | null = null
 
 const SANCTUM_CSRF_URL =
-  process.env.NEXT_PUBLIC_SANCTUM_CSRF_URL ?? 'https://localhost:8686/sanctum/csrf-cookie'
+  process.env.NEXT_PUBLIC_SANCTUM_CSRF_URL ?? 'http://localhost:8686/sanctum/csrf-cookie'
 const AUTH_ENDPOINT =
-  process.env.NEXT_PUBLIC_ECHO_AUTH_ENDPOINT ?? 'https://localhost:8686/broadcasting/auth'
+  process.env.NEXT_PUBLIC_ECHO_AUTH_ENDPOINT ?? 'http://localhost:8686/broadcasting/auth'
 
 async function ensureSanctumCookies() {
   if (csrfPromise) return csrfPromise

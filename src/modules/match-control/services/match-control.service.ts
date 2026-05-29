@@ -2,6 +2,8 @@ import { getApi } from '@/services/api'
 import { MatchControlSnapshot } from '../types'
 import { normalizeMatchControlSnapshot } from '../../matches/utils/normalizers'
 import type { MatchTimeEvent } from '../hooks/useMatchClock'
+import { normalizeMatchEvents } from '../utils/normalizers'
+import type { MatchControlEvent } from '../types'
 
 const MATCHES_PATH = (process.env.NEXT_PUBLIC_MATCHES_PATH ?? '/v2/auth/matches').replace(/\/$/, '')
 
@@ -97,10 +99,55 @@ export const MatchControlGateway = {
     return wrapSnapshot(data)
   },
 
+  async registerTimeout(
+    matchId: string | number,
+    payload: {
+      teamId: string | number
+      type?: string
+      durationSeconds?: number
+      notes?: string | null
+    },
+    options?: { homeTeamId?: string | number; awayTeamId?: string | number }
+  ): Promise<{ snapshot: MatchControlSnapshot | null; timeoutEvent: MatchControlEvent | null }> {
+    const id = await ensureMatchId(matchId)
+    const api = await getApi()
+    const { data } = await api.post(`${MATCHES_PATH}/${id}/timeouts`, {
+      team_id: Number(payload.teamId),
+      type: payload.type ?? '30S',
+      duration_seconds: payload.durationSeconds ?? 60,
+      notes: payload.notes ?? null
+    })
+    const raw = (data?.data ?? data) as Record<string, unknown> | undefined
+    const snapshot = wrapSnapshot(raw?.snapshot ?? raw)
+    const timeoutEventPayload = unwrapResourcePayload(
+      raw?.timeout_event ?? raw?.timeoutEvent ?? data?.timeout_event ?? data?.timeoutEvent
+    )
+    const timeoutEvent = normalizeMatchEvents(
+      timeoutEventPayload ? [timeoutEventPayload] : [],
+      options?.homeTeamId !== undefined ? String(options.homeTeamId) : undefined,
+      options?.awayTeamId !== undefined ? String(options.awayTeamId) : undefined
+    )[0] ?? null
+
+    return { snapshot, timeoutEvent }
+  },
+
   async performAction(matchId: string | number, action: string, body?: Record<string, unknown>): Promise<MatchControlSnapshot | null> {
     const id = await ensureMatchId(matchId)
     const api = await getApi()
     const { data } = await api.post(`${MATCHES_PATH}/${id}/${action}`, body)
     return wrapSnapshot(data)
   }
+}
+
+function unwrapResourcePayload(payload: unknown): unknown {
+  if (!payload || typeof payload !== 'object') {
+    return payload
+  }
+
+  const record = payload as Record<string, unknown>
+  if ('data' in record) {
+    return record.data
+  }
+
+  return payload
 }

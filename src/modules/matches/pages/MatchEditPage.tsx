@@ -1,9 +1,10 @@
 'use client'
 
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CalendarClock, CheckCircle2, Loader2, MapPin, Shield, Users2 } from 'lucide-react'
+import { CalendarClock, CheckCircle2, Loader2, MapPin, PlayCircle, Shield, Users2 } from 'lucide-react'
 import type { AuthProfile } from '@/services/auth.service'
+import type { CompetitionNaipe } from '@/modules/competitions/types'
 import { DashboardShell } from '@/modules/dashboard/components/DashboardShell'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { AlertBanner } from '@/components/AlertBanner'
@@ -28,6 +29,17 @@ function parseIsoDate(value: string) {
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) return null
   return parsed.toISOString()
+}
+
+function naipeLabel(naipe: CompetitionNaipe) {
+  switch (naipe) {
+    case 'masculino':
+      return 'Masculino'
+    case 'feminino':
+      return 'Feminino'
+    default:
+      return 'Misto'
+  }
 }
 
 export function MatchEditPage({ currentUser, matchId }: { currentUser: AuthProfile; matchId: string }) {
@@ -72,6 +84,7 @@ export function MatchEditPage({ currentUser, matchId }: { currentUser: AuthProfi
               <ul className="space-y-2 text-sm text-textSecondary">
                 <li>• Status: {formatMatchStatusLabel(detail.status)}</li>
                 <li>• Competição: {detail.competitionName ?? '—'}</li>
+                <li>• Naipe: {detail.naipe ? naipeLabel(detail.naipe) : '—'}</li>
                 <li>• Local: {detail.venueName ?? 'Local indefinido'}</li>
                 <li>• Início previsto: {detail.startAt ? new Date(detail.startAt).toLocaleString('pt-BR') : '—'}</li>
               </ul>
@@ -100,17 +113,41 @@ function MatchEditForm({
   const { competitions, seasons, teams, venues, submitting, error, success, loadSeasons, loadTeams, update } = editor
   const [competitionId, setCompetitionId] = useState(detail.competitionId ?? '')
   const [seasonId, setSeasonId] = useState(detail.competitionSeasonId ?? '')
+  const [naipe, setNaipe] = useState(detail.naipe ?? '')
   const [homeTeamId, setHomeTeamId] = useState(detail.homeTeam.id ?? '')
   const [awayTeamId, setAwayTeamId] = useState(detail.awayTeam.id ?? '')
   const [venueId, setVenueId] = useState(detail.venueId ?? '')
+  const [broadcastUrl, setBroadcastUrl] = useState(detail.broadcastUrl ?? '')
   const [startAt, setStartAt] = useState(toLocalDateTimeInput(detail.startAt))
   const [localError, setLocalError] = useState<string | null>(null)
 
-  const filteredTeams = useMemo(() => {
-    if (!seasonId) return teams
-    const fromSeason = teams.filter((team) => team.competitionId === seasonId)
-    return fromSeason.length ? fromSeason : teams
-  }, [seasonId, teams])
+  const selectedSeason = useMemo(
+    () => seasons.find((season) => season.id === seasonId) ?? null,
+    [seasonId, seasons]
+  )
+  const availableNaipes = selectedSeason?.availableNaipes ?? []
+  const resolvedNaipe = naipe || (availableNaipes.length === 1 ? availableNaipes[0] : '')
+  const requiresNaipeSelection = availableNaipes.length > 1
+
+  useEffect(() => {
+    setCompetitionId(detail.competitionId ?? '')
+    setSeasonId(detail.competitionSeasonId ?? '')
+    setNaipe(detail.naipe ?? '')
+    setHomeTeamId(detail.homeTeam.id ?? '')
+    setAwayTeamId(detail.awayTeam.id ?? '')
+    setVenueId(detail.venueId ?? '')
+    setBroadcastUrl(detail.broadcastUrl ?? '')
+    setStartAt(toLocalDateTimeInput(detail.startAt))
+  }, [
+    detail.competitionId,
+    detail.competitionSeasonId,
+    detail.naipe,
+    detail.homeTeam.id,
+    detail.awayTeam.id,
+    detail.venueId,
+    detail.broadcastUrl,
+    detail.startAt,
+  ])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -124,6 +161,10 @@ function MatchEditForm({
       setLocalError('Selecione a temporada da competição.')
       return
     }
+    if (!resolvedNaipe) {
+      setLocalError('Selecione o naipe da partida.')
+      return
+    }
     if (homeTeamId === awayTeamId) {
       setLocalError('Mandante e visitante devem ser diferentes.')
       return
@@ -133,14 +174,33 @@ function MatchEditForm({
       setLocalError('Informe uma data/hora válida.')
       return
     }
+    const normalizedBroadcastUrl = broadcastUrl.trim()
+    if (normalizedBroadcastUrl) {
+      try {
+        new URL(normalizedBroadcastUrl)
+      } catch {
+        setLocalError('Informe um link de vídeo válido.')
+        return
+      }
+    }
 
-    await update({
+    const updated = await update({
       competitionSeasonId: seasonId || detail.competitionSeasonId,
+      naipe: resolvedNaipe || null,
       homeTeamId,
       awayTeamId,
       startAt: isoStart ?? detail.startAt,
-      venueId: venueId || null
+      venueId: venueId || null,
+      broadcastUrl: normalizedBroadcastUrl || null
     })
+
+    if (updated) {
+      setSeasonId(updated.competitionSeasonId ?? seasonId)
+      setNaipe(updated.naipe ?? '')
+      setHomeTeamId(updated.homeTeam.id ?? homeTeamId)
+      setAwayTeamId(updated.awayTeam.id ?? awayTeamId)
+      setBroadcastUrl(updated.broadcastUrl ?? '')
+    }
   }
 
   return (
@@ -163,7 +223,7 @@ function MatchEditForm({
         />
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1">
           <span className="flex items-center gap-2 text-sm font-semibold text-textPrimary">
             <Shield className="h-4 w-4 text-textSecondary" />
@@ -175,6 +235,7 @@ function MatchEditForm({
               const value = event.target.value
               setCompetitionId(value)
               setSeasonId('')
+              setNaipe('')
               setHomeTeamId('')
               setAwayTeamId('')
               loadTeams()
@@ -199,8 +260,11 @@ function MatchEditForm({
             value={seasonId}
             onChange={(event) => {
               const value = event.target.value
+              const seasonOption = seasons.find((season) => season.id === value)
+              const nextNaipe = seasonOption?.availableNaipes?.length === 1 ? seasonOption.availableNaipes[0] : ''
               setSeasonId(value)
-              loadTeams(value)
+              setNaipe(nextNaipe)
+              loadTeams(nextNaipe ? value : undefined, nextNaipe ? (nextNaipe as CompetitionNaipe) : undefined)
               setHomeTeamId('')
               setAwayTeamId('')
             }}
@@ -213,6 +277,35 @@ function MatchEditForm({
               </option>
             ))}
           </Select>
+        </div>
+        <div className="space-y-1">
+          <span className="flex items-center gap-2 text-sm font-semibold text-textPrimary">
+            <Shield className="h-4 w-4 text-textSecondary" />
+            Naipe
+          </span>
+          <Select
+            value={resolvedNaipe}
+            onChange={(event) => {
+              const value = event.target.value
+              setNaipe(value)
+              setHomeTeamId('')
+              setAwayTeamId('')
+              loadTeams(value ? seasonId : undefined, value ? (value as CompetitionNaipe) : undefined)
+            }}
+            disabled={submitting || !seasonId || availableNaipes.length === 0}
+          >
+            <option value="">Selecione o naipe</option>
+            {availableNaipes.map((availableNaipe) => (
+              <option key={availableNaipe} value={availableNaipe}>
+                {naipeLabel(availableNaipe)}
+              </option>
+            ))}
+          </Select>
+          <p className="text-xs text-textSecondary">
+            {requiresNaipeSelection
+              ? 'A temporada possui mais de um naipe. Selecione o recorte correto para carregar as inscrições elegíveis.'
+              : 'O naipe da temporada foi resolvido automaticamente a partir das inscrições elegíveis.'}
+          </p>
         </div>
         <div className="space-y-1">
           <span className="flex items-center gap-2 text-sm font-semibold text-textPrimary">
@@ -240,10 +333,10 @@ function MatchEditForm({
           <Select
             value={homeTeamId}
             onChange={(event) => setHomeTeamId(event.target.value)}
-            disabled={submitting || (!seasonId && !detail.competitionSeasonId)}
+            disabled={submitting || !seasonId || !resolvedNaipe}
           >
             <option value="">Selecione o mandante</option>
-            {filteredTeams.map((team) => (
+            {teams.map((team) => (
               <option key={team.id} value={team.id}>
                 {team.label}
               </option>
@@ -258,10 +351,10 @@ function MatchEditForm({
           <Select
             value={awayTeamId}
             onChange={(event) => setAwayTeamId(event.target.value)}
-            disabled={submitting || (!seasonId && !detail.competitionSeasonId)}
+            disabled={submitting || !seasonId || !resolvedNaipe}
           >
             <option value="">Selecione o visitante</option>
-            {filteredTeams.map((team) => (
+            {teams.map((team) => (
               <option key={`${team.id}-away`} value={team.id}>
                 {team.label}
               </option>
@@ -282,6 +375,33 @@ function MatchEditForm({
           <p className="text-xs text-textSecondary">
             Enviamos timestamp em ISO 8601; backend valida `after:now`.
           </p>
+        </div>
+
+        <div className="space-y-1 md:col-span-2">
+          <span className="flex items-center gap-2 text-sm font-semibold text-textPrimary">
+            <PlayCircle className="h-4 w-4 text-textSecondary" />
+            Link do vídeo
+          </span>
+          <Input
+            type="url"
+            value={broadcastUrl}
+            onChange={(event) => setBroadcastUrl(event.target.value)}
+            placeholder="https://..."
+            disabled={submitting}
+          />
+          <p className="text-xs text-textSecondary">
+            Usa o contrato `broadcast_url` já exposto pela API.
+          </p>
+          {broadcastUrl.trim() && (
+            <a
+              href={broadcastUrl.trim()}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex text-xs font-semibold text-primary underline underline-offset-4"
+            >
+              Abrir vídeo
+            </a>
+          )}
         </div>
       </div>
 

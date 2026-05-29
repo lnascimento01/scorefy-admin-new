@@ -10,6 +10,7 @@ export function resolveMatchQuickActions(copy: MatchControlDictionary): MatchQui
     {
       id: 'home-goal',
       label: items.homeGoal.label,
+      shortLabel: 'Gol M',
       description: items.homeGoal.description,
       team: 'home',
       tone: 'danger',
@@ -20,6 +21,7 @@ export function resolveMatchQuickActions(copy: MatchControlDictionary): MatchQui
     {
       id: 'away-goal',
       label: items.awayGoal.label,
+      shortLabel: 'Gol V',
       description: items.awayGoal.description,
       team: 'away',
       tone: 'danger',
@@ -30,6 +32,7 @@ export function resolveMatchQuickActions(copy: MatchControlDictionary): MatchQui
     {
       id: 'timeout-home',
       label: items.timeoutHome.label,
+      shortLabel: 'TO M',
       description: items.timeoutHome.description,
       team: 'home',
       tone: 'info',
@@ -39,6 +42,7 @@ export function resolveMatchQuickActions(copy: MatchControlDictionary): MatchQui
     {
       id: 'timeout-away',
       label: items.timeoutAway.label,
+      shortLabel: 'TO V',
       description: items.timeoutAway.description,
       team: 'away',
       tone: 'info',

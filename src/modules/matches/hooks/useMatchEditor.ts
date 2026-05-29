@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { CompetitionNaipe } from '@/modules/competitions/types'
 import type { MatchControlDetail } from '@/modules/match-control/types'
 import { MatchCatalogGateway } from '../services/match-catalog.service'
 import { MatchesGateway } from '../services/matches.service'
@@ -19,13 +20,15 @@ interface UseMatchEditorState {
   success: string | null
   refetch: () => void
   loadSeasons: (competitionId?: string) => void
-  loadTeams: (competitionSeasonId?: string) => void
+  loadTeams: (competitionSeasonId?: string, naipe?: CompetitionNaipe) => void
   update: (payload: {
     competitionSeasonId?: string
+    naipe?: CompetitionNaipe | null
     homeTeamId?: string
     awayTeamId?: string
     startAt?: string
     venueId?: string | null
+    broadcastUrl?: string | null
   }) => Promise<MatchControlDetail | null>
 }
 
@@ -55,14 +58,14 @@ export function useMatchEditor(matchId: string): UseMatchEditorState {
     }
   }, [])
 
-  const loadTeams = useCallback(async (competitionSeasonId?: string) => {
+  const loadTeams = useCallback(async (competitionSeasonId?: string, naipe?: CompetitionNaipe) => {
     if (!competitionSeasonId) {
       setTeams([])
       return
     }
     setError(null)
     try {
-      const teamOptions = await MatchCatalogGateway.listTeams(competitionSeasonId)
+      const teamOptions = await MatchCatalogGateway.listSeasonTeams(competitionSeasonId, naipe)
       setTeams(teamOptions)
     } catch (err) {
       console.error('Failed to load teams', err)
@@ -93,7 +96,7 @@ export function useMatchEditor(matchId: string): UseMatchEditorState {
       setDetail(data)
       await Promise.all([
         loadSeasons(data.competitionId).catch(() => undefined),
-        loadTeams(data.competitionSeasonId ?? data.competitionId).catch(() => undefined),
+        loadTeams(data.competitionSeasonId ?? data.competitionId, data.naipe ?? undefined).catch(() => undefined),
       ])
     } catch (err) {
       console.error('Failed to load match', err)
@@ -142,7 +145,7 @@ export function useMatchEditor(matchId: string): UseMatchEditorState {
     success,
     refetch: () => loadDetail().catch(() => undefined),
     loadSeasons: (competitionId?: string) => loadSeasons(competitionId).catch(() => undefined),
-    loadTeams: (competitionSeasonId?: string) => loadTeams(competitionSeasonId).catch(() => undefined),
+    loadTeams: (competitionSeasonId?: string, naipe?: CompetitionNaipe) => loadTeams(competitionSeasonId, naipe).catch(() => undefined),
     update
   }
 }

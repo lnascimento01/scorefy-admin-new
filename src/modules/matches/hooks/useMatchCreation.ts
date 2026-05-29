@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import type { CompetitionNaipe } from '@/modules/competitions/types'
 import type { MatchControlDetail } from '@/modules/match-control/types'
 import { resolveMatchActionError } from '../utils/errors'
 import { MatchCatalogGateway, type CatalogOption } from '../services/match-catalog.service'
@@ -20,7 +21,7 @@ interface UseMatchCreationState {
   created: MatchControlDetail | null
   reloadCatalog: () => void
   loadSeasons: (competitionId?: string) => void
-  loadTeams: (competitionSeasonId?: string) => void
+  loadTeams: (competitionSeasonId?: string, naipe?: CompetitionNaipe) => void
   create: (payload: MatchCreatePayload) => Promise<MatchControlDetail | null>
 }
 
@@ -54,7 +55,7 @@ export function useMatchCreation(): UseMatchCreationState {
     }
   }, [])
 
-  const loadTeams = useCallback(async (competitionSeasonId?: string) => {
+  const loadTeams = useCallback(async (competitionSeasonId?: string, naipe?: CompetitionNaipe) => {
     if (!competitionSeasonId) {
       setTeams([])
       setLoadingTeams(false)
@@ -63,7 +64,7 @@ export function useMatchCreation(): UseMatchCreationState {
     setLoadingTeams(true)
     setError(null)
     try {
-      const teamOptions = await MatchCatalogGateway.listTeams(competitionSeasonId)
+      const teamOptions = await MatchCatalogGateway.listSeasonTeams(competitionSeasonId, naipe)
       setTeams(teamOptions)
     } catch (err) {
       console.error('Failed to load teams', err)
@@ -127,7 +128,7 @@ export function useMatchCreation(): UseMatchCreationState {
     created,
     reloadCatalog: () => loadCatalog().catch(() => undefined),
     loadSeasons: (competitionId?: string) => loadSeasons(competitionId).catch(() => undefined),
-    loadTeams: (competitionSeasonId?: string) => loadTeams(competitionSeasonId).catch(() => undefined),
+    loadTeams: (competitionSeasonId?: string, naipe?: CompetitionNaipe) => loadTeams(competitionSeasonId, naipe).catch(() => undefined),
     create
   }
 }

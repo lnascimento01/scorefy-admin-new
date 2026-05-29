@@ -18,18 +18,13 @@ export function QuickActions({ actions, onTrigger, disabled, variant = 'default'
   const copy = dictionary.matchControl.quickActions
   const isCompact = variant === 'compact'
   return (
-    <section className={cn('card p-6', isCompact && 'p-4')}>
-      <div className="mb-5">
-        <h2 className="text-xl font-semibold text-textPrimary">{copy.title}</h2>
-        <p className="text-sm text-textSecondary">{copy.description}</p>
+    <section className={cn('card p-3', !isCompact && 'p-4')}>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h2 className="text-[10px] font-semibold uppercase tracking-[0.24em] text-textSecondary">{copy.title}</h2>
       </div>
-      <div className={cn('grid gap-4 md:grid-cols-2 xl:grid-cols-4', isCompact && 'xl:grid-cols-3')}>
+      <div className={cn('grid gap-2 grid-cols-2 xl:grid-cols-4', isCompact && 'xl:grid-cols-4')}>
         {actions.map((action, index) => {
           const Icon = action.icon
-          const descriptionClass =
-            action.tone && action.tone !== 'neutral'
-              ? 'text-xs text-white/80'
-              : 'text-xs text-textSecondary'
           return (
             <motion.div
               key={action.id}
@@ -41,16 +36,18 @@ export function QuickActions({ actions, onTrigger, disabled, variant = 'default'
                 type="button"
                 variant="ghost"
                 disabled={disabled}
+                title={action.description ?? action.label}
+                aria-label={action.description ?? action.label}
                 onClick={() => onTrigger(action)}
                 className={cn(
-                  'w-full flex-col rounded-xl border text-center text-sm font-semibold shadow-sm transition-all hover:-translate-y-0.5 disabled:opacity-60',
-                  isCompact ? 'h-28 px-3 py-4 text-sm' : 'h-32 px-4 py-6',
+                  'w-full justify-start gap-2 rounded-lg border text-left text-xs font-semibold shadow-sm transition-all hover:-translate-y-0.5 disabled:opacity-60',
+                  isCompact ? 'min-h-9 px-3 py-2' : 'min-h-10 px-3 py-2.5',
                   toneClass(action.tone)
                 )}
               >
-                {Icon && <Icon className={cn(isCompact ? 'h-5 w-5' : 'h-6 w-6')} />}
-                <span className={cn('font-semibold p-2', isCompact ? 'text-sm' : 'text-base')}>
-                  {action.label}
+                {Icon && <Icon className={cn(isCompact ? 'h-3.5 w-3.5' : 'h-4 w-4')} />}
+                <span className="truncate whitespace-nowrap">
+                  {action.shortLabel ?? action.label}
                 </span>
               </Button>
             </motion.div>

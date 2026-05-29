@@ -1,3 +1,5 @@
+import type { CompetitionNaipe } from '@/modules/competitions/types'
+
 export type MatchStatus =
   | 'scheduled'
   | 'not_started'
@@ -62,20 +64,27 @@ export interface MatchControlSnapshot {
   matchId: string
   status: MatchStatus
   period?: number
+  statusLabel?: string
+  periodLabel?: string
+  showScore?: boolean
+  showClock?: boolean
   elapsedSeconds: number
   periodElapsedSeconds?: number
   serverTime?: string
   startTime?: string
   lastPauseAt?: string
   lastEventAt?: string
+  timeoutRemainingSeconds?: number
   maxPeriodSeconds?: number
   firstHalfEnd?: number
+  meta?: Record<string, unknown>
   home: MatchControlTeamSnapshot
   away: MatchControlTeamSnapshot
 }
 
 export interface MatchCreatePayload {
   competitionSeasonId: string
+  naipe?: CompetitionNaipe
   homeTeamId: string
   awayTeamId: string
   startAt: string
@@ -89,8 +98,10 @@ export interface MatchUpdatePlayersPayload {
 
 export interface MatchUpdatePayload {
   competitionSeasonId?: string
+  naipe?: CompetitionNaipe | null
   homeTeamId?: string
   awayTeamId?: string
   startAt?: string
   venueId?: string | null
+  broadcastUrl?: string | null
 }

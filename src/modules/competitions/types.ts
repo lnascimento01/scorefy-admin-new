@@ -144,6 +144,7 @@ export interface CompetitionSeasonTeamRegistration {
   id: string
   competitionSeasonId: string
   teamId: string
+  naipe?: CompetitionNaipe | null
   registrationStatus: RegistrationWorkflowStatus
   eligibilityStatus: RegistrationEligibilityStatus
   submittedAt?: string

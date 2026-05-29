@@ -4,11 +4,20 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: scorefy-admin
+    stdin_open: true
+    tty: true
     ports:
       - "5174:3000"
     environment:
       NODE_ENV: development
-      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    command: ["npm", "run", "dev", "--", "--hostname", "0.0.0.0", "--port", "3000"]
     volumes:
       - .:/app
+      - scorefy-admin-node-modules:/app/node_modules
+      - scorefy-admin-next:/app/.next
     restart: unless-stopped
+
+volumes:
+  scorefy-admin-node-modules:
+  scorefy-admin-next:

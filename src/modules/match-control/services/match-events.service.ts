@@ -29,11 +29,14 @@ export const MatchEventsGateway = {
     return normalizeMatchEvents(events, options?.homeTeamId, options?.awayTeamId)
   },
 
-  async create(payload: CreateMatchEventPayload): Promise<void> {
+  async create(
+    payload: CreateMatchEventPayload,
+    options?: { homeTeamId?: string | number; awayTeamId?: string | number }
+  ): Promise<MatchControlEvent | null> {
     const id = String(payload.matchId ?? '').trim()
     if (!id) throw new Error('Match identifier is required.')
     const api = await getApi()
-    await api.post(`${MATCHES_PATH}/${id}/events`, {
+    const { data } = await api.post(`${MATCHES_PATH}/${id}/events`, {
       match_id: Number(id),
       team_id: payload.teamId !== undefined ? Number(payload.teamId) : undefined,
       player_id: payload.playerId !== undefined ? Number(payload.playerId) : undefined,
@@ -41,5 +44,19 @@ export const MatchEventsGateway = {
       type_id: payload.typeId,
       match_time_seconds: payload.matchTimeSeconds
     })
+    const normalized = normalizeMatchEvents(
+      [data?.data ?? data],
+      options?.homeTeamId !== undefined ? String(options.homeTeamId) : undefined,
+      options?.awayTeamId !== undefined ? String(options.awayTeamId) : undefined
+    )
+    return normalized[0] ?? null
+  },
+
+  async delete(matchId: string | number, eventId: string | number): Promise<void> {
+    const id = String(matchId ?? '').trim()
+    const event = String(eventId ?? '').trim()
+    if (!id || !event) throw new Error('Match and event identifiers are required.')
+    const api = await getApi()
+    await api.delete(`${MATCHES_PATH}/${id}/events/${event}`)
   }
 }

@@ -1,32 +1,27 @@
 'use client'
 
-import { Loader2 } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import type { MatchSummary } from '../types'
-import {
-  formatMatchStatusLabel,
-  getMatchActionCapabilities,
-  getMatchPrimaryAction,
-  getMatchStatusVariant,
-  type MatchTransitionAction
-} from '../utils/status'
+import { formatMatchStatusLabel, getMatchStatusVariant } from '../utils/status'
+import { MatchActionsMenu, type BusyAction } from './MatchActionsMenu'
 
 interface MatchesTableProps {
   matches: MatchSummary[]
   loading?: boolean
-  onTransitionAction?: (match: MatchSummary, action: MatchTransitionAction) => void
+  onTransitionAction?: (match: MatchSummary, action: import('../utils/status').MatchTransitionAction) => void
+  onOpenRoster?: (match: MatchSummary) => void
   onOpenEvents?: (match: MatchSummary) => void
   onOpenScoresheet?: (match: MatchSummary) => void
   onEdit?: (match: MatchSummary) => void
-  actionState?: { matchId: string; action: MatchTransitionAction | 'scoresheet' } | null
+  actionState?: { matchId: string; action: BusyAction } | null
 }
 
 export function MatchesTable({
   matches,
   loading,
   onTransitionAction,
+  onOpenRoster,
   onOpenEvents,
   onOpenScoresheet,
   onEdit,
@@ -53,11 +48,8 @@ export function MatchesTable({
           </TableRow>
         )}
         {matches.map((match) => {
-          const primaryAction = getMatchPrimaryAction(match.status)
           const statusLabel = formatMatchStatusLabel(match.status)
           const statusVariant = getMatchStatusVariant(match.status)
-          const { canGenerateScoresheet } = getMatchActionCapabilities(match.status)
-          const isRowBusy = actionState?.matchId === match.id
 
           return (
             <TableRow key={match.id}>
@@ -95,49 +87,16 @@ export function MatchesTable({
                   {match.metaSlug && <span className="text-[10px] uppercase tracking-wide text-textSecondary/70">{match.metaSlug}</span>}
                 </div>
               </TableCell>
-              <TableCell>
-                <div className="flex items-center justify-end gap-2 text-xs text-textSecondary">
-                  {primaryAction && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={!onTransitionAction || isRowBusy}
-                      onClick={() => onTransitionAction?.(match, primaryAction.action)}
-                    >
-                      {isRowBusy && actionState?.action === primaryAction.action ? (
-                        <span className="flex items-center gap-1">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          {primaryAction.loadingLabel}
-                        </span>
-                      ) : (
-                        primaryAction.label
-                      )}
-                    </Button>
-                  )}
-                  <Button size="sm" variant="outline" onClick={() => onOpenEvents?.(match)} disabled={!onOpenEvents || isRowBusy}>
-                    Eventos
-                  </Button>
-                  {canGenerateScoresheet && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onOpenScoresheet?.(match)}
-                      disabled={!onOpenScoresheet || isRowBusy}
-                    >
-                      {isRowBusy && actionState?.action === 'scoresheet' ? (
-                        <span className="flex items-center gap-1">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          Gerando...
-                        </span>
-                      ) : (
-                        'Súmula'
-                      )}
-                    </Button>
-                  )}
-                  <Button size="sm" variant="ghost" onClick={() => onEdit?.(match)} disabled={!onEdit || isRowBusy}>
-                    Editar
-                  </Button>
-                </div>
+              <TableCell className="relative overflow-visible text-right">
+                <MatchActionsMenu
+                  match={match}
+                  onTransitionAction={onTransitionAction}
+                  onOpenRoster={onOpenRoster}
+                  onOpenEvents={onOpenEvents}
+                  onOpenScoresheet={onOpenScoresheet}
+                  onEdit={onEdit}
+                  actionState={actionState}
+                />
               </TableCell>
             </TableRow>
           )

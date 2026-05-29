@@ -20,4 +20,4 @@ RUN mkdir -p /app/.next /app/node_modules/.cache /tmp/.next \
  && chown -R app:app /app /tmp
 
 EXPOSE 3000
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0", "--port", "3000"]

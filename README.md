@@ -135,3 +135,60 @@ npm run build
 ```
 
 Para validar o backend junto com o admin, rode também a suíte Laravel no repositório `/var/www/handscores-api` assim que o ambiente de testes tiver driver de banco habilitado.
+
+## Módulo de Partidas
+
+O módulo de partidas trabalha sobre a entidade técnica `Match` e usa o fluxo operacional de `match_player` e `lineups` que já existem no backend.
+
+### Rotas do admin
+
+- `/matches`
+- `/matches/create`
+- `/matches/[matchId]/edit`
+- `/matches/[matchId]/roster`
+- `/matches/[matchId]/control`
+
+### Funcionalidades
+
+- listagem paginada de partidas com filtros
+- ação explícita de `Gerenciar partida` na listagem
+- gerenciamento pré-jogo do elenco relacionado por equipe
+- revisão e ajuste do elenco antes do apito inicial
+- suporte a entrada tardia de jogadores elegíveis durante a partida
+- contexto de eventos usando apenas atletas relacionados à partida
+
+### Regras operacionais
+
+- o admin só permite relacionar atletas elegíveis da temporada da partida
+- atletas precisam pertencer ao time correto
+- atletas precisam ter inscrição ativa e elegível na temporada/campeonato
+- atletas fora da partida não podem ser usados em eventos
+- atleta relacionado depois do início passa a valer imediatamente para eventos
+
+### Endpoints consumidos
+
+- `GET /api/v1/auth/matches`
+- `GET /api/v1/auth/matches/{match}`
+- `POST /api/v1/auth/matches`
+- `PATCH /api/v1/auth/matches/{match}`
+- `PATCH /api/v1/auth/matches/{match}/players`
+- `POST /api/v2/auth/matches/{match}/start`
+- `POST /api/v2/auth/matches/{match}/pause`
+- `POST /api/v2/auth/matches/{match}/resume`
+- `POST /api/v2/auth/matches/{match}/second-half`
+- `POST /api/v2/auth/matches/{match}/finish`
+- `GET /api/v2/auth/matches/{match}/events/list`
+- `POST /api/v2/auth/matches/{match}/events`
+- `GET /api/v1/auth/competition-seasons/{competitionSeason}/team-registrations`
+- `GET /api/v1/auth/competition-season-team-registrations/{teamReg}`
+
+### Fluxo de teste local
+
+1. Acesse `/matches`.
+2. Abra `Gerenciar partida` em uma partida agendada.
+3. Relacione atletas elegíveis de cada equipe.
+4. Remova um atleta relacionado e salve.
+5. Inicie a partida pelo painel de controle.
+6. Abra `Gerenciar partida` novamente e inclua um atleta elegível como entrada tardia.
+7. Registre um evento com esse atleta no painel de controle.
+8. Tente usar um atleta de outro time ou sem inscrição elegível para validar o bloqueio `422`.
